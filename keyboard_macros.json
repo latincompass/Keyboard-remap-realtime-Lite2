@@ -1,0 +1,69 @@
+{
+  "version": "1.0",
+  "macros": [
+    {
+      "name": "M0",
+      "content": "静夜思\n[唐] 李白\n床前明月光，\n疑是地上霜。\n举头望明月，\n低头思故乡。\n"
+    },
+    {
+      "name": "M1",
+      "content": ""
+    },
+    {
+      "name": "M2",
+      "content": ""
+    },
+    {
+      "name": "M3",
+      "content": ""
+    },
+    {
+      "name": "M4",
+      "content": ""
+    },
+    {
+      "name": "M5",
+      "content": ""
+    },
+    {
+      "name": "M6",
+      "content": ""
+    },
+    {
+      "name": "M7",
+      "content": ""
+    },
+    {
+      "name": "M8",
+      "content": ""
+    },
+    {
+      "name": "M9",
+      "content": ""
+    },
+    {
+      "name": "M10",
+      "content": ""
+    },
+    {
+      "name": "M11",
+      "content": ""
+    },
+    {
+      "name": "M12",
+      "content": ""
+    },
+    {
+      "name": "M13",
+      "content": ""
+    },
+    {
+      "name": "M14",
+      "content": ""
+    },
+    {
+      "name": "M15",
+      "content": ""
+    }
+  ]
+}

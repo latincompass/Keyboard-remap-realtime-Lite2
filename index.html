@@ -1,0 +1,4591 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M6-B 改键工具 (Win/F1-F12修复版)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .header {
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .layer-select {
+            display: flex;
+            gap: 8px;
+        }
+        .layer-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .device-select {
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+        .keyboard-preview {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+        .drag-handle {
+            height: 8px;
+            background: var(--bg-tertiary);
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s ease;
+        }
+        .drag-handle:hover {
+            background: var(--theme-color);
+        }
+        .drag-icon {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+        .drag-handle:hover .drag-icon {
+            color: white;
+        }
+        .bottom-panel {
+            display: flex;
+            flex-direction: row;
+            min-height: 200px;
+            overflow: hidden;
+        }
+        .sidebar-tabs {
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            gap: 8px;
+            overflow-y: auto;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            width: 100%;
+            padding: 12px 8px;
+            border-radius: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            background: #333;
+            color: #ccc;
+        }
+        .tab-btn.active {
+            background: #3d3d3d;
+            color: var(--theme-color);
+            border-left: 3px solid var(--theme-color);
+        }
+        .key-select-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .key-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .key-option {
+            padding: 10px 6px;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 13px;
+        }
+        .key-option:hover {
+            background: #4d4d4d;
+            border-color: var(--theme-color);
+            transform: translateY(-1px);
+        }
+        .key-option:active {
+            background: var(--theme-color);
+            border-color: var(--theme-color-dark);
+            color: white;
+        }
+        .m6b-keyboard {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            grid-template-rows: repeat(2, 80px);
+            gap: 10px;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        .m6b-key {
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .m6b-key:hover {
+            border-color: var(--theme-color);
+            background: #4a4a4a;
+        }
+        .m6b-key.selected {
+            border-color: var(--theme-color);
+            background: rgba(var(--theme-color-rgb, 195, 152, 168), 0.2);
+            color: var(--theme-color);
+            animation: blink 1s infinite alternate;
+        }
+        @keyframes blink {
+            from { border-color: var(--theme-color); }
+            to { border-color: var(--theme-color-light); }
+        }
+        .connect-prompt {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .connect-btn {
+            background: var(--theme-color);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.2s;
+        }
+        .connect-btn:hover {
+            background: var(--theme-color-dark);
+        }
+        .connect-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .status-bar {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2d2d2d;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .status-bar.show {
+            opacity: 1;
+        }
+        /* 新增功能键分组样式 */
+        .key-group {
+            margin-top: 24px;
+        }
+        .key-group-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--theme-color);
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #444;
+        }
+        
+        /* 完整主题颜色变量系统 */
+        :root, [data-theme="pink"] {
+            /* 粉色主题（默认，QMK/VIA风格） */
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #252525;
+            --bg-header: #2d2d2d;
+            --bg-panel: #2d2d2d;
+            --bg-keyboard: #333;
+            --bg-key: #444;
+            --bg-hover: #4a4a4a;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888;
+            --border-color: #444;
+            --border-light: #555;
+            --theme-color: #c398a8;
+            --theme-color-dark: #b68295;
+            --theme-color-light: #d0aebb;
+            --shadow: rgba(0,0,0,0.5);
+        }
+        
+        [data-theme="purple"] {
+            /* 紫色主题 */
+            --bg-primary: #1a1520;
+            --bg-secondary: #2a2535;
+            --bg-tertiary: #221c2a;
+            --bg-header: #2a2535;
+            --bg-panel: #2a2535;
+            --bg-keyboard: #352f42;
+            --bg-key: #453a55;
+            --bg-hover: #554a66;
+            --text-primary: #e8e0f0;
+            --text-secondary: #a89bb8;
+            --border-color: #4a4060;
+            --border-light: #5a5070;
+            --theme-color: #9b7eb5;
+            --theme-color-dark: #8a6da3;
+            --theme-color-light: #b49fca;
+            --shadow: rgba(100,80,120,0.4);
+        }
+        
+        [data-theme="cyan"] {
+            /* 淡青色主题 */
+            --bg-primary: #1a2222;
+            --bg-secondary: #253535;
+            --bg-tertiary: #1e2c2c;
+            --bg-header: #253535;
+            --bg-panel: #253535;
+            --bg-keyboard: #304040;
+            --bg-key: #405050;
+            --bg-hover: #506060;
+            --text-primary: #e0f0f0;
+            --text-secondary: #88c8c8;
+            --border-color: #405555;
+            --border-light: #506565;
+            --theme-color: #7ec8c8;
+            --theme-color-dark: #6bb5b5;
+            --theme-color-light: #9ed9d9;
+            --shadow: rgba(80,140,140,0.4);
+        }
+        
+        [data-theme="green"] {
+            /* 绿色主题 */
+            --bg-primary: #1a201a;
+            --bg-secondary: #253025;
+            --bg-tertiary: #1e281e;
+            --bg-header: #253025;
+            --bg-panel: #253025;
+            --bg-keyboard: #304030;
+            --bg-key: #405040;
+            --bg-hover: #506050;
+            --text-primary: #e0f0e0;
+            --text-secondary: #88b888;
+            --border-color: #405540;
+            --border-light: #506550;
+            --theme-color: #7eb87e;
+            --theme-color-dark: #6ba66b;
+            --theme-color-light: #99ca99;
+            --shadow: rgba(80,120,80,0.4);
+        }
+        
+        [data-theme="orange"] {
+            /* 橙色主题 */
+            --bg-primary: #201a15;
+            --bg-secondary: #352520;
+            --bg-tertiary: #281c18;
+            --bg-header: #352520;
+            --bg-panel: #352520;
+            --bg-keyboard: #403025;
+            --bg-key: #504030;
+            --bg-hover: #605040;
+            --text-primary: #f0e8e0;
+            --text-secondary: #c8a888;
+            --border-color: #554535;
+            --border-light: #655545;
+            --theme-color: #e8a87c;
+            --theme-color-dark: #d59568;
+            --theme-color-light: #f0bb99;
+            --shadow: rgba(140,100,60,0.4);
+        }
+        
+        [data-theme="darkPink"] {
+            /* 深粉暗黑主题 - 更深邃的暗黑风格 */
+            --bg-primary: #0f0a0d;
+            --bg-secondary: #1a1218;
+            --bg-tertiary: #140e14;
+            --bg-header: #1a1218;
+            --bg-panel: #1a1218;
+            --bg-keyboard: #201820;
+            --bg-key: #2c2030;
+            --bg-hover: #382840;
+            --text-primary: #f0e0e8;
+            --text-secondary: #c8a0b8;
+            --border-color: #302840;
+            --border-light: #403050;
+            --theme-color: #d870a0;
+            --theme-color-dark: #c05080;
+            --theme-color-light: #e890c0;
+            --shadow: rgba(160,80,120,0.5);
+        }
+        
+        [data-theme="lightPink"] {
+            /* 亮粉主题 - 浅色亮丽风格 */
+            --bg-primary: #f8f4f6;
+            --bg-secondary: #fff8fa;
+            --bg-tertiary: #f0ecf0;
+            --bg-header: #fff8fa;
+            --bg-panel: #fff8fa;
+            --bg-keyboard: #ffeef4;
+            --bg-key: #fff0f8;
+            --bg-hover: #ffe0ec;
+            --text-primary: #4a3040;
+            --text-secondary: #8a7090;
+            --border-color: #e8d0e0;
+            --border-light: #f0e0f0;
+            --theme-color: #e070a0;
+            --theme-color-dark: #d05090;
+            --theme-color-light: #f090b0;
+            --shadow: rgba(200,120,160,0.3);
+        }
+        
+        [data-theme="roseGold"] {
+            /* 玫瑰金主题 - 高雅玫瑰金色调 */
+            --bg-primary: #1a1518;
+            --bg-secondary: #252022;
+            --bg-tertiary: #1e1a1c;
+            --bg-header: #252022;
+            --bg-panel: #252022;
+            --bg-keyboard: #2c282c;
+            --bg-key: #3c3840;
+            --bg-hover: #4c4858;
+            --text-primary: #f0e8ec;
+            --text-secondary: #c8b0b8;
+            --border-color: #3c3840;
+            --border-light: #4c4858;
+            --theme-color: #e8b4b8;
+            --theme-color-dark: #d8a0a8;
+            --theme-color-light: #f8d0d8;
+            --shadow: rgba(200,150,160,0.4);
+        }
+        
+        [data-theme="sakura"] {
+            /* 樱花粉主题 - 柔和淡雅樱花色 */
+            --bg-primary: #1e1820;
+            --bg-secondary: #282030;
+            --bg-tertiary: #221c28;
+            --bg-header: #282030;
+            --bg-panel: #282030;
+            --bg-keyboard: #302838;
+            --bg-key: #403848;
+            --bg-hover: #504860;
+            --text-primary: #f0e8f4;
+            --text-secondary: #c0a8d0;
+            --border-color: #403850;
+            --border-light: #504860;
+            --theme-color: #f0a8c8;
+            --theme-color-dark: #e090b0;
+            --theme-color-light: #ffc0e0;
+            --shadow: rgba(220,140,180,0.4);
+        }
+        
+        [data-theme="hotPink"] {
+            /* Hot Pink主题 - 鲜艳热辣粉色 */
+            --bg-primary: #150810;
+            --bg-secondary: #1e1018;
+            --bg-tertiary: #180c14;
+            --bg-header: #1e1018;
+            --bg-panel: #1e1018;
+            --bg-keyboard: #241420;
+            --bg-key: #301828;
+            --bg-hover: #402030;
+            --text-primary: #ffe0f0;
+            --text-secondary: #ffa0c8;
+            --border-color: #382038;
+            --border-light: #482848;
+            --theme-color: #ff60a0;
+            --theme-color-dark: #ff4090;
+            --theme-color-light: #ff80c0;
+            --shadow: rgba(255,80,140,0.5);
+        }
+        
+        [data-theme="retroPink"] {
+            /* 复古粉主题 - 80年代复古风格 */
+            --bg-primary: #1a0f18;
+            --bg-secondary: #241420;
+            --bg-tertiary: #1c1018;
+            --bg-header: #241420;
+            --bg-panel: #241420;
+            --bg-keyboard: #2c1820;
+            --bg-key: #3c2030;
+            --bg-hover: #4c2840;
+            --text-primary: #f8e8f0;
+            --text-secondary: #d8a8c0;
+            --border-color: #3c2030;
+            --border-light: #4c2840;
+            --theme-color: #ff99cc;
+            --theme-color-dark: #ff70b8;
+            --theme-color-light: #ffbbe0;
+            --shadow: rgba(255,120,180,0.4);
+        }
+        
+        /* 应用主题变量到各个元素 */
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .header {
+            background: var(--bg-header);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .main-container {
+            background: var(--bg-primary);
+        }
+        .keyboard-preview {
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-primary) 100%);
+        }
+        .m6b-keyboard {
+            background: var(--bg-keyboard);
+            box-shadow: 0 8px 24px var(--shadow);
+        }
+        .m6b-key {
+            background: var(--bg-key);
+            border: 2px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        .m6b-key:hover {
+            border-color: var(--theme-color);
+            background: var(--bg-hover);
+        }
+        .m6b-key.selected {
+            border-color: var(--theme-color);
+            background: color-mix(in srgb, var(--theme-color) 20%, var(--bg-key));
+            color: var(--theme-color);
+            animation: blink 1s infinite alternate;
+        }
+        @keyframes blink {
+            from { border-color: var(--theme-color); }
+            to { border-color: var(--theme-color-light); }
+        }
+        .bottom-panel {
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            height: 45%;
+        }
+        .sidebar-tabs {
+            background: var(--bg-tertiary);
+            border-right: 1px solid var(--border-color);
+            width: 120px;
+            display: flex;
+            flex-direction: column;
+            padding: 12px 0;
+            gap: 4px;
+        }
+        .tab-btn {
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            padding: 12px 16px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 0 8px 8px 0;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .tab-btn.active {
+            background: var(--bg-secondary);
+            color: var(--theme-color);
+            border-left: 3px solid var(--theme-color);
+        }
+        .key-select-panel {
+            background: var(--bg-panel);
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+        .key-mapping-area {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .lighting-settings-area {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 16px;
+            overflow-y: auto;
+            background: var(--bg-panel);
+            z-index: 10;
+            box-sizing: border-box;
+        }
+        .lighting-settings-area.active {
+            display: block;
+        }
+        .key-option {
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        .key-option:hover {
+            background: var(--bg-key);
+            border-color: var(--theme-color);
+            transform: translateY(-1px);
+        }
+        .key-option:active {
+            background: var(--theme-color);
+            border-color: var(--theme-color-dark);
+            color: white;
+        }
+        .layer-btn {
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        .layer-btn.active {
+            background: var(--theme-color);
+            border-color: var(--theme-color-dark);
+            color: white;
+        }
+        /* 灯光分类标签样式 */
+        .lighting-category-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .lighting-tab-btn {
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            padding: 10px 16px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 13px;
+            border-radius: 0 8px 8px 0;
+            transition: all 0.2s;
+            width: 120px;
+        }
+        .lighting-tab-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .lighting-tab-btn.active {
+            background: var(--bg-secondary);
+            color: var(--theme-color);
+            border-left: 3px solid var(--theme-color);
+        }
+        .lighting-category-content {
+            overflow-y: auto;
+        }
+        .device-select {
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            color: var(--text-primary);
+        }
+        .connect-prompt h2 {
+            color: var(--text-primary);
+        }
+        .connect-btn {
+            background: var(--theme-color);
+            border: none;
+            color: white;
+        }
+        .connect-btn:hover {
+            background: var(--theme-color-dark);
+        }
+        .connect-btn:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+        }
+        .status-bar {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .key-group-title {
+            color: var(--theme-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .connect-prompt {
+            color: var(--text-secondary);
+        }
+        /* 灯光控制样式 */
+        .lighting-controls {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 16px;
+            border: 1px solid var(--border-color);
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        .control-group label span.value {
+            color: var(--theme-color);
+            font-weight: 600;
+            min-width: 50px;
+            text-align: right;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+            margin: 8px 0;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: var(--bg-hover);
+            border-radius: 3px;
+            outline: none;
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--theme-color);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            background: var(--theme-color-light);
+        }
+        .control-group input[type="color"] {
+            width: 100%;
+            height: 50px;
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .control-group input[type="color"]:hover {
+            border-color: var(--theme-color);
+        }
+        .control-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-hover);
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .control-group select:hover {
+            border-color: var(--theme-color);
+        }
+        .control-group select:focus {
+            outline: none;
+            border-color: var(--theme-color);
+        }
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+        .control-buttons button {
+            flex: 1;
+            padding: 12px 16px;
+            background: var(--theme-color);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .control-buttons button:hover {
+            background: var(--theme-color-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(var(--theme-color-rgb, 195, 152, 168), 0.3);
+        }
+        /* 灯光子标签样式 */
+        .lighting-sub-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: 10px;
+        }
+        .lighting-tab-btn {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .lighting-tab-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+        .lighting-tab-btn.active {
+            background: var(--theme-color);
+            color: white;
+            box-shadow: 0 2px 8px rgba(var(--theme-color-rgb, 195, 152, 168), 0.3);
+        }
+        .lighting-tab-content {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+        /* 换层面板样式 */
+        #layerTab {
+            width: 100%;
+            max-width: none;
+            overflow: hidden;
+        }
+        .layer-panel-wrapper {
+            width: 100%;
+            max-height: 280px;
+            overflow-x: auto;
+            overflow-y: auto;
+            position: relative;
+            padding-bottom: 40px;
+        }
+        .layer-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: none;
+        }
+        .layer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+            gap: 8px;
+            width: 100%;
+        }
+        .layer-section {
+            background: transparent;
+            border-radius: 8px;
+            padding: 12px;
+            border: none;
+            width: 100%;
+        }
+        /* 换层滚动条样式 */
+        .layer-scrollbar {
+            position: absolute;
+            bottom: 4px;
+            left: 16px;
+            right: 16px;
+            height: 6px;
+            background: transparent;
+            border-radius: 3px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+        .layer-scrollbar-track {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            border: 1px solid var(--border-color);
+        }
+        .layer-scrollbar-thumb {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            left: 0;
+            width: 60px;
+            height: 80%;
+            background: var(--theme-color);
+            border-radius: 3px;
+            cursor: grab;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .layer-scrollbar-thumb:hover {
+            background: var(--theme-color-dark);
+            height: 100%;
+        }
+        .layer-scrollbar-thumb:active {
+            cursor: grabbing;
+        }
+        .layer-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--theme-color);
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .layer-section-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--theme-color);
+            border-radius: 50%;
+        }
+        /* 换层按钮样式 */
+        .layer-key-btn {
+            padding: 10px 14px;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .layer-key-btn:hover {
+            background: var(--bg-key);
+            border-color: var(--theme-color);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(100, 108, 255, 0.2);
+        }
+        .layer-key-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        .layer-description {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+        .layer-key {
+            padding: 12px 8px;
+            background: var(--bg-hover);
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .layer-key:hover {
+            background: var(--bg-key);
+            border-color: var(--theme-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--theme-color-rgb, 195, 152, 168), 0.2);
+        }
+        .layer-key:active {
+            background: var(--theme-color);
+            color: white;
+        }
+        /* 灯光控制按钮网格 */
+        .lighting-key-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .lighting-key-option {
+            padding: 12px 8px;
+            background: var(--bg-hover);
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        .lighting-key-option:hover {
+            background: var(--bg-key);
+            border-color: var(--theme-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(var(--theme-color-rgb, 195, 152, 168), 0.2);
+        }
+        .lighting-key-option:active {
+            background: var(--theme-color);
+            color: white;
+        }
+        /* 高级灯光设置区域 */
+        .advanced-lighting {
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .advanced-lighting h4 {
+            color: var(--theme-color);
+            font-size: 15px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .advanced-lighting h4::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+        }
+        .indicator-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+        .indicator-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--theme-color);
+        }
+        .indicator-label {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        .indicator-color-picker {
+            width: 60px;
+            height: 36px;
+            border: 2px solid var(--border-light);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        /* 实时预览区域 */
+        .lighting-preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .preview-keyboard {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 8px;
+        }
+        .preview-key {
+            border-radius: 8px;
+            background: var(--bg-key);
+            border: 2px solid var(--border-light);
+            transition: all 0.3s ease;
+            animation: breathe 2s ease-in-out infinite;
+        }
+        @keyframes breathe {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        /* 标签内容样式 */
+        .tab-content {
+            padding: 20px;
+            text-align: center;
+        }
+        .tab-content h3 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        /* 底部EEPROM区域样式 */
+        .eeprom-section {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-light);
+            padding: 16px;
+            z-index: 100;
+            margin-top: 20px;
+        }
+        .eeprom-section h3 {
+            text-align: center;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        /* EEPROM查看器样式 */
+        .eeprom-viewer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .eeprom-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            max-height: 250px;
+            max-width: 600px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            border: 1px solid var(--border-light);
+            padding: 16px;
+            background: var(--bg-secondary);
+            margin-bottom: 12px;
+            width: 100%;
+        }
+        .eeprom-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+        .eeprom-grid::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-radius: 4px;
+        }
+        .eeprom-grid::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 4px;
+        }
+        .eeprom-grid::-webkit-scrollbar-thumb:hover {
+            background: var(--theme-color);
+        }
+        .eeprom-cell {
+            width: 60px;
+            height: 40px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            padding: 2px;
+        }
+        .eeprom-value {
+            font-size: 12px;
+            font-weight: bold;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .eeprom-address {
+            font-size: 8px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .eeprom-cell.has-data {
+            background: #e6f7ff;
+        }
+        .eeprom-cell.has-data .eeprom-value {
+            color: #1890ff;
+            font-weight: bold;
+        }
+        .eeprom-controls {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            max-width: 600px;
+            justify-content: center;
+        }
+        .eeprom-controls button {
+            padding: 8px 16px;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .eeprom-controls button:hover {
+            background: var(--theme-color);
+            color: white;
+        }
+        /* 模态对话框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: var(--bg-primary);
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            animation: modalFadeIn 0.3s ease;
+        }
+        @keyframes modalFadeIn {
+            from {opacity: 0; transform: translateY(-50px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+        .close-btn:hover {
+            color: var(--theme-color);
+        }
+        .modal-body {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+        }
+        .modal-footer {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-light);
+        }
+        .modal-footer button {
+            padding: 8px 16px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-footer button:hover {
+            background: var(--theme-color);
+            color: white;
+        }
+        /* 层选择器样式 */
+        .layer-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .layer-selector label {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+        .layer-selector select {
+            padding: 4px 8px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        .lighting-tab-panel {
+            display: none;
+        }
+        .lighting-tab-panel[style*="display: block"] {
+            display: block !important;
+        }
+        .keycode-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .keycode-table th, .keycode-table td {
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .keycode-table th {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            position: sticky;
+            top: 0;
+        }
+        .keycode-table tr:hover {
+            background: var(--bg-hover);
+        }
+        .keycode-table td:first-child {
+            font-family: monospace;
+            color: var(--theme-color);
+        }
+        .macro-header {
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-light);
+            padding-bottom: 8px;
+        }
+        .macro-tabs {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .macro-tab-btn {
+            padding: 4px 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .macro-tab-btn:hover {
+            border-color: var(--theme-color);
+        }
+        .macro-tab-btn.active {
+            background: var(--theme-color);
+            color: white;
+            border-color: var(--theme-color);
+        }
+        .macro-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .macro-toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .macro-mode-btn {
+            padding: 8px 16px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .macro-mode-btn.active {
+            background: var(--theme-color);
+            color: white;
+            border-color: var(--theme-color);
+        }
+        .macro-mode-btn:hover:not(.active) {
+            background: var(--bg-secondary);
+        }
+        .macro-selector {
+            padding: 8px 16px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            font-size: 14px;
+            min-width: 80px;
+        }
+        .macro-progress-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .macro-progress-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .macro-progress-fill {
+            height: 100%;
+            background: var(--theme-color);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .macro-buffer-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            min-width: 100px;
+            text-align: right;
+        }
+        .macro-mode-content {
+            margin-bottom: 12px;
+        }
+        #macroTextArea {
+            width: 100%;
+            height: 180px;
+            padding: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: var(--text-primary);
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        #macroTextArea:focus {
+            outline: none;
+            border-color: var(--theme-color);
+        }
+        .macro-hints {
+            margin-top: 8px;
+        }
+        .macro-hints .hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .record-controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .record-btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .record-btn:not(.stop) {
+            background: #28a745;
+            color: white;
+        }
+        .record-btn:not(.stop):hover {
+            background: #218838;
+        }
+        .record-btn.stop {
+            background: #dc3545;
+            color: white;
+        }
+        .record-btn.stop:hover {
+            background: #c82333;
+        }
+        .record-status {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .recorded-keys {
+            padding: 12px;
+            background: #1a1a1a;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            min-height: 80px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+        .macro-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .macro-action-btn {
+            padding: 10px 20px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            background: var(--bg-hover);
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .macro-action-btn:hover {
+            background: var(--bg-secondary);
+        }
+        .macro-action-btn.primary {
+            background: var(--theme-color);
+            color: white;
+            border-color: var(--theme-color);
+        }
+        .macro-action-btn.primary:hover {
+            background: var(--theme-color-dark);
+        }
+        .macro-action-btn.danger {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+        .macro-action-btn.danger:hover {
+            background: #c82333;
+        }
+        .macro-test-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        .macro-test-input:focus {
+            outline: none;
+            border-color: var(--theme-color);
+        }
+    </style>
+</head>
+<body>
+    <input type="text" id="globalMacroInput" style="position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;" readonly />
+    <div class="header">
+        <div class="layer-select">
+            <button class="layer-btn active" data-layer="0">0</button>
+            <button class="layer-btn" data-layer="1">1</button>
+            <button class="layer-btn" data-layer="2">2</button>
+            <button class="layer-btn" data-layer="3">3</button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="device-select" id="keycodeListBtn" style="border: none; cursor: pointer;">🔤 键值表</button>
+            <button class="device-select" id="eepromToggleBtn" style="border: none; cursor: pointer;">📦 EEPROM</button>
+            <button class="device-select" id="backupBtn" style="border: none; cursor: pointer;">📦 备份当前HTML</button>
+            <div style="display: flex; gap: 4px; align-items: center; margin-left: 8px;">
+                <span style="font-size: 12px; color: #888;">主题:</span>
+                <button class="theme-btn" data-theme="pink" title="粉色主题" style="background: #c398a8; border: 2px solid #fff; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="purple" title="紫色主题" style="background: #9b7eb5; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="cyan" title="淡青色主题" style="background: #7ec8c8; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="green" title="绿色主题" style="background: #7eb87e; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="orange" title="橙色主题" style="background: #e8a87c; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="darkPink" title="深粉暗黑" style="background: #d870a0; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="lightPink" title="亮粉主题" style="background: #e070a0; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="roseGold" title="玫瑰金" style="background: #e8b4b8; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="sakura" title="樱花粉" style="background: #f0a8c8; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="hotPink" title="Hot Pink" style="background: #ff60a0; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+                <button class="theme-btn" data-theme="retroPink" title="复古粉" style="background: #ff99cc; border: 2px solid #555; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;"></button>
+            </div>
+            <select class="device-select" id="deviceSelector" disabled style="margin-left: 8px;">
+            </select>
+        </div>
+    </div>
+    <div class="main-container">
+        <div class="keyboard-preview" id="keyboardPreview">
+            <div class="connect-prompt" id="connectPrompt">
+                <h2>未连接键盘</h2>
+                <button class="connect-btn" id="connectBtn">连接设备</button>
+            </div>
+            <div class="m6b-keyboard" id="m6bKeyboard" style="display: none;">
+                <div class="m6b-key" data-key-index="0">--</div>
+                <div class="m6b-key" data-key-index="1">--</div>
+                <div class="m6b-key" data-key-index="2">--</div>
+                <div class="m6b-key" data-key-index="3">--</div>
+                <div class="m6b-key" data-key-index="4">--</div>
+                <div class="m6b-key" data-key-index="5">--</div>
+            </div>
+        </div>
+        <div class="drag-handle" id="dragHandle">
+            <div class="drag-icon">⋮⋮</div>
+        </div>
+        <div class="bottom-panel">
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="basic">基础</button>
+                <button class="tab-btn" data-tab="function">功能</button>
+                <button class="tab-btn" data-tab="media">媒体</button>
+                <button class="tab-btn" data-tab="macro">宏</button>
+                <button class="tab-btn" data-tab="layer">换层</button>
+                <button class="tab-btn" data-tab="special">💡 灯光</button>
+            </div>
+            <div class="key-select-panel" id="keySelectPanel">
+                <div class="key-mapping-area">
+                    <!-- 基础键位面板 -->
+                    <div id="basicTab" class="tab-content">
+                <h3>基础键位</h3>
+                <div class="key-grid">
+                    <div class="key-option" data-key-code="0x0029">Esc</div>
+                    <div class="key-option" data-key-code="0x002B">Tab</div>
+                    <div class="key-option" data-key-code="0x0028">Enter</div>
+                    <div class="key-option" data-key-code="0x002A">Backspace</div>
+                    <div class="key-option" data-key-code="0x002C">Space</div>
+                    <div class="key-option" data-key-code="0x0039">Caps</div>
+                    <div class="key-option" data-key-code="0x00E1">Shift</div>
+                    <div class="key-option" data-key-code="0x00E0">Ctrl</div>
+                    <div class="key-option" data-key-code="0x00E2">Alt</div>
+                    <div class="key-option" data-key-code="0x00E3">左Win</div>
+                    <div class="key-option" data-key-code="0x00E7">右Win</div>
+                    <div class="key-option" data-key-code="0x004F">→</div>
+                    <div class="key-option" data-key-code="0x0050">←</div>
+                    <div class="key-option" data-key-code="0x0051">↓</div>
+                    <div class="key-option" data-key-code="0x0052">↑</div>
+                    <div class="key-option" data-key-code="0x004C">Del</div>
+                    <div class="key-option" data-key-code="0x0004">A</div>
+                    <div class="key-option" data-key-code="0x0005">B</div>
+                    <div class="key-option" data-key-code="0x0006">C</div>
+                    <div class="key-option" data-key-code="0x0007">D</div>
+                    <div class="key-option" data-key-code="0x0008">E</div>
+                    <div class="key-option" data-key-code="0x0009">F</div>
+                    <div class="key-option" data-key-code="0x000A">G</div>
+                    <div class="key-option" data-key-code="0x000B">H</div>
+                    <div class="key-option" data-key-code="0x000C">I</div>
+                    <div class="key-option" data-key-code="0x000D">J</div>
+                    <div class="key-option" data-key-code="0x000E">K</div>
+                    <div class="key-option" data-key-code="0x000F">L</div>
+                    <div class="key-option" data-key-code="0x0010">M</div>
+                    <div class="key-option" data-key-code="0x0011">N</div>
+                    <div class="key-option" data-key-code="0x0012">O</div>
+                    <div class="key-option" data-key-code="0x0013">P</div>
+                    <div class="key-option" data-key-code="0x0014">Q</div>
+                    <div class="key-option" data-key-code="0x0015">R</div>
+                    <div class="key-option" data-key-code="0x0016">S</div>
+                    <div class="key-option" data-key-code="0x0017">T</div>
+                    <div class="key-option" data-key-code="0x0018">U</div>
+                    <div class="key-option" data-key-code="0x0019">V</div>
+                    <div class="key-option" data-key-code="0x001A">W</div>
+                    <div class="key-option" data-key-code="0x001B">X</div>
+                    <div class="key-option" data-key-code="0x001C">Y</div>
+                    <div class="key-option" data-key-code="0x001D">Z</div>
+                    <div class="key-option" data-key-code="0x001E">1</div>
+                    <div class="key-option" data-key-code="0x001F">2</div>
+                    <div class="key-option" data-key-code="0x0020">3</div>
+                    <div class="key-option" data-key-code="0x0021">4</div>
+                    <div class="key-option" data-key-code="0x0022">5</div>
+                    <div class="key-option" data-key-code="0x0023">6</div>
+                    <div class="key-option" data-key-code="0x0024">7</div>
+                    <div class="key-option" data-key-code="0x0025">8</div>
+                    <div class="key-option" data-key-code="0x0026">9</div>
+                    <div class="key-option" data-key-code="0x0027">0</div>
+                    <div class="key-option" data-key-code="0x002D">-</div>
+                    <div class="key-option" data-key-code="0x002E">=</div>
+                    <div class="key-option" data-key-code="0x002F">[</div>
+                    <div class="key-option" data-key-code="0x0030">]</div>
+                    <div class="key-option" data-key-code="0x0031">\</div>
+                    <div class="key-option" data-key-code="0x0033">;</div>
+                    <div class="key-option" data-key-code="0x0034">'</div>
+                    <div class="key-option" data-key-code="0x0035">`</div>
+                    <div class="key-option" data-key-code="0x0036">,</div>
+                    <div class="key-option" data-key-code="0x0037">.</div>
+                    <div class="key-option" data-key-code="0x0038">/</div>
+                </div>
+            </div>
+
+            <!-- 功能键面板（F1-F12 + 系统键） -->
+            <div id="functionTab" class="tab-content" style="display: none;">
+                <h3>功能键位</h3>
+                <div class="key-group">
+                    <div class="key-group-title">F1-F12</div>
+                    <div class="key-grid">
+                        <!-- 标准QMK F1-F12键值：58-69（十进制） -->
+                        <div class="key-option" data-key-code="0x003A">F1</div>
+                        <div class="key-option" data-key-code="0x003B">F2</div>
+                        <div class="key-option" data-key-code="0x003C">F3</div>
+                        <div class="key-option" data-key-code="0x003D">F4</div>
+                        <div class="key-option" data-key-code="0x003E">F5</div>
+                        <div class="key-option" data-key-code="0x003F">F6</div>
+                        <div class="key-option" data-key-code="0x0040">F7</div>
+                        <div class="key-option" data-key-code="0x0041">F8</div>
+                        <div class="key-option" data-key-code="0x0042">F9</div>
+                        <div class="key-option" data-key-code="0x0043">F10</div>
+                        <div class="key-option" data-key-code="0x0044">F11</div>
+                        <div class="key-option" data-key-code="0x0045">F12</div>
+                    </div>
+                </div>
+
+                <div class="key-group">
+                    <div class="key-group-title">F13-F24（宏触发键）</div>
+                    <div class="key-grid">
+                        <!-- F13-F24用于宏触发：104-115（十进制），即0x68-0x73 -->
+                        <div class="key-option" data-key-code="0x0068">F13</div>
+                        <div class="key-option" data-key-code="0x0069">F14</div>
+                        <div class="key-option" data-key-code="0x006A">F15</div>
+                        <div class="key-option" data-key-code="0x006B">F16</div>
+                        <div class="key-option" data-key-code="0x006C">F17</div>
+                        <div class="key-option" data-key-code="0x006D">F18</div>
+                        <div class="key-option" data-key-code="0x006E">F19</div>
+                        <div class="key-option" data-key-code="0x006F">F20</div>
+                        <div class="key-option" data-key-code="0x0070">F21</div>
+                        <div class="key-option" data-key-code="0x0071">F22</div>
+                        <div class="key-option" data-key-code="0x0072">F23</div>
+                        <div class="key-option" data-key-code="0x0073">F24</div>
+                    </div>
+                </div>
+
+                <div class="key-group">
+                    <div class="key-group-title">系统键</div>
+                    <div class="key-grid">
+                        <div class="key-option" data-key-code="0x00E3">左Win</div>
+                        <div class="key-option" data-key-code="0x00E7">右Win</div>
+                        <div class="key-option" data-key-code="0x0046">PrintScreen</div>
+                        <div class="key-option" data-key-code="0x0047">ScrollLock</div>
+                        <div class="key-option" data-key-code="0x0048">Pause</div>
+                        <div class="key-option" data-key-code="0x0049">Insert</div>
+                        <div class="key-option" data-key-code="0x004A">Home</div>
+                        <div class="key-option" data-key-code="0x004B">PageUp</div>
+                        <div class="key-option" data-key-code="0x004C">Del</div>
+                        <div class="key-option" data-key-code="0x004D">End</div>
+                        <div class="key-option" data-key-code="0x004E">PageDown</div>
+                        <div class="key-option" data-key-code="0x0053">NumLock</div>
+                    </div>
+                </div>
+
+                <div class="key-group">
+                    <div class="key-group-title">数字小键盘</div>
+                    <div class="key-grid">
+                        <div class="key-option" data-key-code="0x0054">KP/</div>
+                        <div class="key-option" data-key-code="0x0055">KP*</div>
+                        <div class="key-option" data-key-code="0x0056">KP-</div>
+                        <div class="key-option" data-key-code="0x0057">KP+</div>
+                        <div class="key-option" data-key-code="0x0058">KPEnter</div>
+                        <div class="key-option" data-key-code="0x0059">KP1</div>
+                        <div class="key-option" data-key-code="0x005A">KP2</div>
+                        <div class="key-option" data-key-code="0x005B">KP3</div>
+                        <div class="key-option" data-key-code="0x005C">KP4</div>
+                        <div class="key-option" data-key-code="0x005D">KP5</div>
+                        <div class="key-option" data-key-code="0x005E">KP6</div>
+                        <div class="key-option" data-key-code="0x005F">KP7</div>
+                        <div class="key-option" data-key-code="0x0060">KP8</div>
+                        <div class="key-option" data-key-code="0x0061">KP9</div>
+                        <div class="key-option" data-key-code="0x0062">KP0</div>
+                        <div class="key-option" data-key-code="0x0063">KP.</div>
+                    </div>
+                </div>
+
+                <div class="key-group">
+                    <div class="key-group-title">宏键 (M0-M1)</div>
+                    <div class="key-grid">
+                        <div class="key-option" data-key-code="0x7700">M0</div>
+                        <div class="key-option" data-key-code="0x7701">M1</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 媒体键面板（示例） -->
+            <div id="mediaTab" class="tab-content" style="display: none;">
+                <h3>媒体键位</h3>
+                <div class="key-grid">
+                    <div class="key-option" data-key-code="0x0080">播放/暂停</div>
+                    <div class="key-option" data-key-code="0x0081">停止</div>
+                    <div class="key-option" data-key-code="0x0082">上一曲</div>
+                    <div class="key-option" data-key-code="0x0083">下一曲</div>
+                    <div class="key-option" data-key-code="0x0084">音量+</div>
+                    <div class="key-option" data-key-code="0x0085">音量-</div>
+                    <div class="key-option" data-key-code="0x0086">静音</div>
+                </div>
+            </div>
+
+            <!-- 宏面板 -->
+            <div id="macroTab" class="tab-content" style="display: none;">
+                <div class="macro-header">
+                    <div class="macro-tabs">
+                        <button class="macro-tab-btn active" data-macro-index="0">M0</button>
+                        <button class="macro-tab-btn" data-macro-index="1">M1</button>
+                    </div>
+                </div>
+                <div class="macro-editor">
+                    <div class="macro-toolbar">
+                        <select id="macroSelector" class="macro-selector" onchange="loadMacroContent()">
+                            <option value="0">M0</option>
+                            <option value="1">M1</option>
+                        </select>
+                        </div>
+                    </div>
+
+                    <div id="macroScriptMode" class="macro-mode-content">
+                        <textarea id="macroTextArea" class="macro-editor" placeholder="在这里输入宏内容...&#10;&#10;示例：HELLO"></textarea>
+                    </div>
+
+                    <div class="macro-actions">
+                        <button id="testMacroBtn" class="macro-action-btn" onclick="testCurrentMacro()">▶ 测试宏</button>
+                        <button id="saveMacroBtn" class="macro-action-btn primary" onclick="saveAllMacros()">💾 保存宏到键盘</button>
+                        <button id="clearMacroBtn" class="macro-action-btn danger" onclick="clearCurrentMacro()">🗑 清空宏</button>
+                    </div>
+
+                    <input type="text" id="macroTestInput" class="macro-test-input" placeholder="宏测试输出..." />
+                </div> <!-- 闭合 macro-editor -->
+            </div> <!-- 闭合 macroTab -->
+            <div id="layerTab" class="tab-content" style="display: none;">
+                <div class="layer-panel-wrapper">
+                    <div class="layer-panel">
+                        <div class="layer-grid">
+                            <button class="layer-key-btn" data-key-code="0x5200">TO(0)</button>
+                            <button class="layer-key-btn" data-key-code="0x5201">TO(1)</button>
+                            <button class="layer-key-btn" data-key-code="0x5202">TO(2)</button>
+                            <button class="layer-key-btn" data-key-code="0x5203">TO(3)</button>
+                            <button class="layer-key-btn" data-key-code="0x5204">TO(4)</button>
+                            <button class="layer-key-btn" data-key-code="0x5205">TO(5)</button>
+                            <button class="layer-key-btn" data-key-code="0x5206">TO(6)</button>
+                            <button class="layer-key-btn" data-key-code="0x5207">TO(7)</button>
+                            <button class="layer-key-btn" data-key-code="0x5220">MO(0)</button>
+                            <button class="layer-key-btn" data-key-code="0x5221">MO(1)</button>
+                            <button class="layer-key-btn" data-key-code="0x5222">MO(2)</button>
+                            <button class="layer-key-btn" data-key-code="0x5223">MO(3)</button>
+                            <button class="layer-key-btn" data-key-code="0x5224">MO(4)</button>
+                            <button class="layer-key-btn" data-key-code="0x5225">MO(5)</button>
+                            <button class="layer-key-btn" data-key-code="0x5226">MO(6)</button>
+                            <button class="layer-key-btn" data-key-code="0x5227">MO(7)</button>
+                            <button class="layer-key-btn" data-key-code="0x5260">TG(0)</button>
+                            <button class="layer-key-btn" data-key-code="0x5261">TG(1)</button>
+                            <button class="layer-key-btn" data-key-code="0x5262">TG(2)</button>
+                            <button class="layer-key-btn" data-key-code="0x5263">TG(3)</button>
+                            <button class="layer-key-btn" data-key-code="0x5264">TG(4)</button>
+                            <button class="layer-key-btn" data-key-code="0x5265">TG(5)</button>
+                            <button class="layer-key-btn" data-key-code="0x5266">TG(6)</button>
+                            <button class="layer-key-btn" data-key-code="0x5267">TG(7)</button>
+                        </div>
+                    </div>
+                    <!-- 拖拽滚动条 -->
+                    <div class="layer-scrollbar">
+                        <div class="layer-scrollbar-track">
+                            <div class="layer-scrollbar-thumb"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="specialTab" class="tab-content" style="display: none;">
+                <h3 style="margin-bottom: 20px;">特殊键位</h3>
+                <div class="key-grid">
+                    <div class="key-option" data-key-code="0x0000">无操作</div>
+                    <div class="key-option" data-key-code="0x00B0">休眠</div>
+                    <div class="key-option" data-key-code="0x00B1">唤醒</div>
+                </div>
+            </div>
+            
+            <!-- 灯光设置区域（独立于key-mapping-area） -->
+            <div class="lighting-settings-area" id="lightingSettingsArea">
+                <h4 style="color: var(--theme-color); font-size: 15px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">💡 灯光设置</h4>
+                
+                <!-- 分类标签 -->
+                <div class="lighting-category-tabs">
+                    <button class="lighting-tab-btn active" data-category="lighting">灯光控制</button>
+                    <button class="lighting-tab-btn" data-category="special">特殊</button>
+                </div>
+                
+                <!-- 灯光控制内容 -->
+                <div id="lightingContent" class="lighting-category-content">
+                    <!-- 灯光预览 -->
+                    <div class="lighting-preview">
+                        <div class="preview-keyboard">
+                            <div class="preview-key" id="previewKey0"></div>
+                            <div class="preview-key" id="previewKey1"></div>
+                            <div class="preview-key" id="previewKey2"></div>
+                            <div class="preview-key" id="previewKey3"></div>
+                            <div class="preview-key" id="previewKey4"></div>
+                            <div class="preview-key" id="previewKey5"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 灯光控制 -->
+                    <div class="lighting-controls">
+                        <h4 style="color: var(--theme-color); font-size: 15px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">灯光控制</h4>
+                        <div class="lighting-key-grid">
+                            <div class="lighting-key-option" data-key-code="0x7810">LM_ON</div>
+                            <div class="lighting-key-option" data-key-code="0x7811">LM_OFF</div>
+                            <div class="lighting-key-option" data-key-code="0x7812">LM_TOGG</div>
+                            <div class="lighting-key-option" data-key-code="0x7813">LM_NEXT</div>
+                            <div class="lighting-key-option" data-key-code="0x7814">LM_PREV</div>
+                            <div class="lighting-key-option" data-key-code="0x7815">LM_BRIU</div>
+                            <div class="lighting-key-option" data-key-code="0x7816">LM_BRID</div>
+                            <div class="lighting-key-option" data-key-code="0x7817">LM_SPDU</div>
+                            <div class="lighting-key-option" data-key-code="0x7818">LM_SPDD</div>
+                            <div class="lighting-key-option" data-key-code="0x7819">LM_FLGN</div>
+                            <div class="lighting-key-option" data-key-code="0x781A">LM_FLGP</div>
+                        </div>
+                        
+                        <h4 style="color: var(--theme-color); font-size: 15px; margin-top: 20px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">RGB模式</h4>
+                        <div class="lighting-key-grid">
+                            <div class="lighting-key-option" data-key-code="0x782B">静态</div>
+                            <div class="lighting-key-option" data-key-code="0x782C">呼吸</div>
+                            <div class="lighting-key-option" data-key-code="0x782D">彩虹</div>
+                            <div class="lighting-key-option" data-key-code="0x782E">漩涡</div>
+                            <div class="lighting-key-option" data-key-code="0x782F">蛇形</div>
+                            <div class="lighting-key-option" data-key-code="0x7830">骑士</div>
+                            <div class="lighting-key-option" data-key-code="0x7831">圣诞</div>
+                            <div class="lighting-key-option" data-key-code="0x7832">渐变</div>
+                            <div class="lighting-key-option" data-key-code="0x7833">测试</div>
+                            <div class="lighting-key-option" data-key-code="0x7834">闪烁</div>
+                        </div>
+                        
+                        <h4 style="color: var(--theme-color); font-size: 15px; margin-top: 20px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">RGB矩阵控制</h4>
+                        <div class="lighting-key-grid">
+                            <div class="lighting-key-option" data-key-code="0x7840">RM_ON</div>
+                            <div class="lighting-key-option" data-key-code="0x7841">RM_OFF</div>
+                            <div class="lighting-key-option" data-key-code="0x7842">RM_TOGG</div>
+                            <div class="lighting-key-option" data-key-code="0x7843">RM_NEXT</div>
+                            <div class="lighting-key-option" data-key-code="0x7844">RM_PREV</div>
+                            <div class="lighting-key-option" data-key-code="0x7845">RM_HUE+</div>
+                            <div class="lighting-key-option" data-key-code="0x7846">RM_HUE-</div>
+                            <div class="lighting-key-option" data-key-code="0x7847">RM_SAT+</div>
+                            <div class="lighting-key-option" data-key-code="0x7848">RM_SAT-</div>
+                            <div class="lighting-key-option" data-key-code="0x7849">RM_VAL+</div>
+                            <div class="lighting-key-option" data-key-code="0x784A">RM_VAL-</div>
+                            <div class="lighting-key-option" data-key-code="0x784B">RM_SPD+</div>
+                            <div class="lighting-key-option" data-key-code="0x784C">RM_SPD-</div>
+                            <div class="lighting-key-option" data-key-code="0x784D">RM_FLGN</div>
+                            <div class="lighting-key-option" data-key-code="0x784E">RM_FLGP</div>
+                        </div>
+                        
+                        <!-- 高级灯光设置 -->
+                        <h4 style="color: var(--theme-color); font-size: 15px; margin-top: 20px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">⚙️ 高级设置</h4>
+                        <div class="control-group">
+                            <label>亮度 <span class="value" id="brightnessValue">128</span></label>
+                            <input type="range" id="brightnessSlider" min="0" max="255" value="128">
+                        </div>
+                        <div class="control-group">
+                            <label>速度 <span class="value" id="speedValue">1</span></label>
+                            <input type="range" id="speedSlider" min="0" max="3" value="1">
+                        </div>
+                        <div class="control-group">
+                            <label>RGB亮度 <span class="value" id="rgbBrightnessValue">128</span></label>
+                            <input type="range" id="rgbBrightnessSlider" min="0" max="255" value="128">
+                        </div>
+                        <div class="control-group">
+                            <label>RGB速度 <span class="value" id="rgbSpeedValue">1</span></label>
+                            <input type="range" id="rgbSpeedSlider" min="0" max="3" value="1">
+                        </div>
+                        <div class="control-group">
+                            <label>灯光效果</label>
+                            <select id="effectSelector">
+                                <option value="0">静态</option>
+                                <option value="1">呼吸</option>
+                                <option value="2">彩虹</option>
+                                <option value="3">漩涡</option>
+                                <option value="4">蛇形</option>
+                                <option value="5">骑士</option>
+                                <option value="6">圣诞</option>
+                                <option value="7">渐变</option>
+                                <option value="8">测试</option>
+                                <option value="9">闪烁</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>RGB效果</label>
+                            <select id="rgbEffectSelector">
+                                <option value="0">静态</option>
+                                <option value="1">呼吸</option>
+                                <option value="2">彩虹</option>
+                                <option value="3">漩涡</option>
+                                <option value="4">蛇形</option>
+                                <option value="5">骑士</option>
+                                <option value="6">圣诞</option>
+                                <option value="7">渐变</option>
+                                <option value="8">测试</option>
+                                <option value="9">闪烁</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>灯光颜色</label>
+                            <input type="color" id="colorPicker" value="#ff0000">
+                        </div>
+                        <div class="control-group">
+                            <label>RGB颜色</label>
+                            <input type="color" id="rgbColorPicker" value="#ff0000">
+                        </div>
+                        <div class="control-buttons">
+                            <button id="lightOnBtn">开启灯光</button>
+                            <button id="lightOffBtn">关闭灯光</button>
+                            <button id="saveLightingBtn">保存设置</button>
+                        </div>
+                        
+                        <!-- 指示灯设置 -->
+                        <div class="advanced-lighting">
+                            <h4>指示灯设置</h4>
+                            
+                            <div class="indicator-row">
+                                <input type="checkbox" id="capsLockIndicator" class="indicator-checkbox">
+                                <label class="indicator-label">Caps Lock指示灯</label>
+                                <input type="color" id="capsLockColor" value="#ff0000" class="indicator-color-picker">
+                            </div>
+                            
+                            <div class="indicator-row">
+                                <input type="checkbox" id="layer1Indicator" class="indicator-checkbox">
+                                <label class="indicator-label">层1指示灯</label>
+                                <input type="color" id="layer1Color" value="#00ff00" class="indicator-color-picker">
+                            </div>
+                            <div class="indicator-row">
+                                <input type="checkbox" id="layer2Indicator" class="indicator-checkbox">
+                                <label class="indicator-label">层2指示灯</label>
+                                <input type="color" id="layer2Color" value="#0000ff" class="indicator-color-picker">
+                            </div>
+                            <div class="indicator-row">
+                                <input type="checkbox" id="layer3Indicator" class="indicator-checkbox">
+                                <label class="indicator-label">层3指示灯</label>
+                                <input type="color" id="layer3Color" value="#ffff00" class="indicator-color-picker">
+                            </div>
+                            
+                            <div class="control-buttons" style="margin-top: 16px;">
+                                <button id="saveAdvancedBtn">保存指示灯设置</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 特殊键位内容 -->
+                <div id="specialContent" class="lighting-category-content" style="display: none;">
+                    <h4 style="color: var(--theme-color); font-size: 15px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">特殊键位</h4>
+                    <div class="key-grid">
+                        <div class="key-option" data-key-code="0x0000">无操作</div>
+                        <div class="key-option" data-key-code="0x00B0">休眠</div>
+                        <div class="key-option" data-key-code="0x00B1">唤醒</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- EEPROM查看器模态对话框 -->
+    <div id="eepromModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <h3>EEPROM查看器</h3>
+                    <div class="layer-selector">
+                        <label for="eepromLayerSelect">层:</label>
+                        <select id="eepromLayerSelect">
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="closeEepromModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="eeprom-grid" id="eepromGrid">
+                    <!-- EEPROM内容将在这里动态生成 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="readEepromBtn">读取EEPROM</button>
+                <button id="saveEepromBtn">保存到文件</button>
+                <button id="saveEepromJsonBtn">保存为JSON</button>
+                <button id="closeEepromBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 键值列表模态对话框 -->
+    <div id="keycodeModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; max-height: 80vh;">
+            <div class="modal-header">
+                <h3>键值列表</h3>
+                <button id="closeKeycodeModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: calc(80vh - 120px); overflow-y: auto;">
+                <table class="keycode-table">
+                    <thead>
+                        <tr><th>代码</th><th>键值名称</th></tr>
+                    </thead>
+                    <tbody id="keycodeTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-bar" id="statusBar">操作提示</div>
+
+    <script>
+        // 核心配置（严格匹配VIA协议 + M6-B硬件）
+        const SUPPORTED_DEVICES = [
+            {
+                name: 'RAMA WORKS M6-B',
+                vid: 0x5241,
+                pid: 0x006B,
+                keyCount: 6
+            },
+            {
+                name: 'RAMA WORKS M6-B',
+                vid: 0x5241,
+                pid: 0x006C,
+                keyCount: 6
+            },
+            {
+                name: '新键盘 (6键)',
+                vid: 0x7c88,
+                pid: 0x7c97,
+                keyCount: 6
+            }
+        ];
+        
+        // VIA协议命令定义
+        const VIA_COMMAND = {
+            GET_PROTOCOL: 0x01,
+            GET_KEYBOARD_VALUE: 0x02,
+            SET_KEYBOARD_VALUE: 0x03,
+            GET_KEYCODE: 0x04,
+            SET_KEYCODE: 0x05,
+            CUSTOM_MENU_SET_VALUE: 0x07,
+            CUSTOM_MENU_GET_VALUE: 0x08,
+            CUSTOM_MENU_SAVE: 0x09,
+            BACKLIGHT_CONFIG_SET_VALUE: 0x07, // 旧命令，保留以兼容
+            BACKLIGHT_CONFIG_GET_VALUE: 0x08, // 旧命令，保留以兼容
+            BACKLIGHT_CONFIG_SAVE: 0x09, // 旧命令，保留以兼容
+            // VIA宏协议命令（来自VIA官方代码）
+            MACRO_GET_COUNT: 0x0C,
+            MACRO_GET_BUFFER_SIZE: 0x0D,
+            MACRO_GET_BUFFER: 0x0E,
+            MACRO_SET_BUFFER: 0x0F,
+            MACRO_RESET: 0x10,
+            EEPROM_RESET: 0x11,
+            EEPROM_SAVE: 0x12
+        };
+
+        // 宏相关全局变量
+        const MACRO_COUNT = 2; // 只保留M0和M1两个宏
+        let currentMacroIndex = 0;
+        let macros = new Array(MACRO_COUNT).fill(''); // 预先初始化为2个空字符串
+        
+        // VIA灯光值定义
+        const LIGHTING_VALUE = {
+            BACKLIGHT_BRIGHTNESS: 0x09,
+            BACKLIGHT_EFFECT: 0x0a,
+            BACKLIGHT_COLOR_1: 0x0c,
+            BACKLIGHT_COLOR_2: 0x0d,
+            BACKLIGHT_CAPS_LOCK_INDICATOR_COLOR: 0x0e,
+            BACKLIGHT_CAPS_LOCK_INDICATOR_ROW_COL: 0x0f,
+            BACKLIGHT_LAYER_1_INDICATOR_COLOR: 0x10,
+            BACKLIGHT_LAYER_1_INDICATOR_ROW_COL: 0x11,
+            BACKLIGHT_LAYER_2_INDICATOR_COLOR: 0x12,
+            BACKLIGHT_LAYER_2_INDICATOR_ROW_COL: 0x13,
+            BACKLIGHT_LAYER_3_INDICATOR_COLOR: 0x14,
+            BACKLIGHT_LAYER_3_INDICATOR_ROW_COL: 0x15,
+            BACKLIGHT_EFFECT_SPEED: 0x0b
+        };
+        
+        let currentDevice = SUPPORTED_DEVICES[0]; // 默认使用第一个设备
+        let KEY_COUNT = currentDevice.keyCount;
+
+        // DOM 元素
+        const connectBtn = document.getElementById('connectBtn');
+        const connectPrompt = document.getElementById('connectPrompt');
+        const m6bKeyboard = document.getElementById('m6bKeyboard');
+        const keySelectPanel = document.getElementById('keySelectPanel');
+        const statusBar = document.getElementById('statusBar');
+        const m6bKeys = document.querySelectorAll('.m6b-key');
+        const keyOptions = document.querySelectorAll('.key-select-panel .key-option:not(.lighting-controls .key-option)');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const layerBtns = document.querySelectorAll('.layer-btn');
+        const deviceSelector = document.getElementById('deviceSelector');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // 全局变量
+        let hidDevice = null;
+        let selectedKeyIndex = null;
+        let CURRENT_LAYER = 0; // 改为可变量
+        let heartbeatTimer = null; // 心跳定时器
+        // 完整的QMK/VIA键值映射表（包含Win/F1-F12所有功能键）
+        const keyCodeToText = {
+            // 基础键
+            0: 'NO', 1: 'RollOver', 2: 'PostFail', 3: 'ErrorUndef',
+            4: 'A', 5: 'B', 6: 'C', 7: 'D', 8: 'E', 9: 'F', 10: 'G',
+            11: 'H', 12: 'I', 13: 'J', 14: 'K', 15: 'L', 16: 'M', 17: 'N', 18: 'O',
+            19: 'P', 20: 'Q', 21: 'R', 22: 'S', 23: 'T', 24: 'U', 25: 'V', 26: 'W',
+            27: 'X', 28: 'Y', 29: 'Z', 30: '1', 31: '2', 32: '3', 33: '4', 34: '5',
+            35: '6', 36: '7', 37: '8', 38: '9', 39: '0', 40: 'Enter', 41: 'Esc',
+            42: 'Backspace', 43: 'Tab', 44: 'Space', 45: '-', 46: '=', 47: '[',
+            48: ']', 49: '\\', 50: 'NonUS#', 51: ';', 52: '\'', 53: '`', 54: ',', 55: '.', 56: '/',
+            57: 'Caps', 58: 'F1', 59: 'F2', 60: 'F3', 61: 'F4', 62: 'F5', 63: 'F6',
+            64: 'F7', 65: 'F8', 66: 'F9', 67: 'F10', 68: 'F11', 69: 'F12',
+            70: 'PrintScreen', 71: 'ScrollLock', 72: 'Pause', 73: 'Insert',
+            74: 'Home', 75: 'PageUp', 76: 'Del', 77: 'End', 78: 'PageDown',
+            79: '→', 80: '←', 81: '↓', 82: '↑', 83: 'NumLock',
+            84: 'KP/', 85: 'KP*', 86: 'KP-', 87: 'KP+', 88: 'KPEnter',
+            89: 'KP1', 90: 'KP2', 91: 'KP3', 92: 'KP4', 93: 'KP5', 94: 'KP6',
+            95: 'KP7', 96: 'KP8', 97: 'KP9', 98: 'KP0', 99: 'KP.',
+            100: 'NonUS\\', 101: 'Application', 102: 'Power', 103: 'KP=',
+            104: 'F13', 105: 'F14', 106: 'F15', 107: 'F16', 108: 'F17',
+            109: 'F18', 110: 'F19', 111: 'F20', 112: 'F21', 113: 'F22',
+            114: 'F23', 115: 'F24',
+            
+            // 修饰键
+            224: 'LCtrl', 225: 'LShift', 226: 'LAlt', 227: 'LGui',
+            228: 'RCtrl', 229: 'RShift', 230: 'RAlt', 231: 'RGui',
+            
+            // 媒体键
+            164: 'Mute', 165: 'VolUp', 166: 'VolDn',
+            172: 'Play', 173: 'Stop', 174: 'Prev', 175: 'Next',
+            179: 'PlayPause',
+            
+            // 换层键
+            21056: 'TO(0)', 21057: 'TO(1)', 21058: 'TO(2)', 21059: 'TO(3)',
+            21060: 'TO(4)', 21061: 'TO(5)', 21062: 'TO(6)', 21063: 'TO(7)',
+            21024: 'MO(0)', 21025: 'MO(1)', 21026: 'MO(2)', 21027: 'MO(3)',
+            21028: 'MO(4)', 21029: 'MO(5)', 21030: 'MO(6)', 21031: 'MO(7)',
+            21088: 'TG(0)', 21089: 'TG(1)', 21090: 'TG(2)', 21091: 'TG(3)',
+            21092: 'TG(4)', 21093: 'TG(5)', 21094: 'TG(6)', 21095: 'TG(7)',
+
+            // 宏键 (M0-M15) - VIA格式 0x5F00-0x5F0F
+            24320: 'M0', 24321: 'M1', 24322: 'M2', 24323: 'M3',
+            24324: 'M4', 24325: 'M5', 24326: 'M6', 24327: 'M7',
+            24328: 'M8', 24329: 'M9', 24330: 'M10', 24331: 'M11',
+            24332: 'M12', 24333: 'M13', 24334: 'M14', 24335: 'M15',
+            // 宏键 (M0-M15) - VIA格式 0x7700-0x770F
+            30464: 'M0', 30465: 'M1', 30466: 'M2', 30467: 'M3',
+            30468: 'M4', 30469: 'M5', 30470: 'M6', 30471: 'M7',
+            30472: 'M8', 30473: 'M9', 30474: 'M10', 30475: 'M11',
+            30476: 'M12', 30477: 'M13', 30478: 'M14', 30479: 'M15',
+
+            // 灯光控制键
+            29712: 'LM_ON', 29713: 'LM_OFF', 29714: 'LM_TOGG', 29715: 'LM_NEXT',
+            29716: 'LM_PREV', 29717: 'LM_BRIU', 29718: 'LM_BRID', 29719: 'LM_SPDU',
+            29720: 'LM_SPDD', 29721: 'LM_FLGN', 29722: 'LM_FLGP',
+            29739: 'RGB_M_P', 29740: 'RGB_M_B', 29741: 'RGB_M_R', 29742: 'RGB_M_SW',
+            29743: 'RGB_M_SN', 29744: 'RGB_M_K', 29745: 'RGB_M_X', 29746: 'RGB_M_G',
+            29747: 'RGB_M_T', 29748: 'RGB_M_TW',
+            29760: 'RM_ON', 29761: 'RM_OFF', 29762: 'RM_TOGG', 29763: 'RM_NEXT',
+            29764: 'RM_PREV', 29765: 'RM_HUEU', 29766: 'RM_HUED', 29767: 'RM_SATU',
+            29768: 'RM_SATD', 29769: 'RM_VALU', 29770: 'RM_VALD', 29771: 'RM_SPDU',
+            29772: 'RM_SPDD', 29773: 'RM_FLGN', 29774: 'RM_FLGP'
+        };
+        // 反向映射（用于VIA协议解析）
+        const textToKeyCode = Object.fromEntries(
+            Object.entries(keyCodeToText).map(([k, v]) => [v, parseInt(k)])
+        );
+
+        // ===== 核心修复：VIA协议通信（解决Win/F1-F12字节传输错误）=====
+        function showStatus(text, duration = 2000) {
+            statusBar.textContent = text;
+            statusBar.classList.add('show');
+            setTimeout(() => statusBar.classList.remove('show'), duration);
+        }
+
+        function checkWebHIDSupport() {
+            if (!navigator.hid) {
+                showStatus('当前浏览器不支持 WebHID（请用 Chrome/Edge 89+）', 5000);
+                connectBtn.disabled = true;
+                return false;
+            }
+            return true;
+        }
+
+        // VIA协议命令发送（WebHID格式）
+        async function sendVIAReport(commandId, dataArray) {
+            if (!hidDevice) return;
+            // WebHID格式：32字节数据（不含reportId）
+            const reportData = new Uint8Array(32);
+            reportData[0] = commandId; // 第1字节：命令ID
+            
+            // 填充数据字节
+            if (dataArray && dataArray.length) {
+                dataArray.forEach((val, idx) => {
+                    if (idx + 1 < 32) {
+                        reportData[idx + 1] = val & 0xFF;
+                    }
+                });
+            }
+            
+            // 使用sendReport()方法发送（WebHID标准）
+            // WebHID标准使用reportId=0
+            try {
+                await hidDevice.sendReport(0, reportData);
+                console.log(`[DEBUG] Sent command ${commandId} (0x${commandId.toString(16)}) with data:`, dataArray || []);
+            } catch (e) {
+                showStatus(`发送指令失败: ${e.message}`, 3000);
+                console.error(`[ERROR] Send command ${commandId} error:`, e);
+            }
+        }
+
+        // 发送原始VIA报告（用于宏）- WebHID格式
+        async function sendVIAReportRaw(dataArray) {
+            if (!hidDevice) return;
+            // WebHID格式：32字节数据（不含reportId）
+            const reportData = new Uint8Array(32);
+            
+            // 填充数据（dataArray[0]是命令ID，dataArray[1...]是数据）
+            if (dataArray && dataArray.length) {
+                dataArray.forEach((val, idx) => {
+                    if (idx < 32) {
+                        reportData[idx] = val & 0xFF;
+                    }
+                });
+            }
+            
+            // 使用sendReport()方法发送（WebHID标准）
+            // WebHID标准使用reportId=0
+            try {
+                await hidDevice.sendReport(0, reportData);
+                console.log(`[DEBUG] Sent raw report (${reportData.length} bytes):`, Array.from(reportData).slice(0, Math.min(10, reportData.length)).map(b => b.toString(16).padStart(2, '0')).join(' ') + '...');
+            } catch (e) {
+                showStatus(`发送指令失败: ${e.message}`, 3000);
+                console.error(`[ERROR] Send raw report error:`, e);
+            }
+        }
+
+        // 连接设备 + 自动读取所有键值
+        async function connectDevice() {
+            if (!checkWebHIDSupport()) return;
+
+            try {
+                // 支持所有已配置的设备，同时允许选择其他HID设备
+                const filters = SUPPORTED_DEVICES.map(device => ({
+                    vendorId: device.vid,
+                    productId: device.pid
+                }));
+
+                // 添加通用HID设备支持（允许选择任何HID设备）
+                filters.push({
+                    usagePage: 0xFF60, // VIA raw_hid usage page
+                    usage: 0x61
+                });
+
+                const devices = await navigator.hid.requestDevice({
+                    filters: filters,
+                    optionalServices: ['device_information']
+                });
+
+                console.log('[DEBUG] Found devices:', devices);
+                
+                // 打印所有设备信息
+                devices.forEach((d, idx) => {
+                    console.log(`[DEBUG] Device ${idx}:`, d);
+                    console.log(`[DEBUG] Device ${idx} productName:`, d.productName);
+                    console.log(`[DEBUG] Device ${idx} collections:`, d.collections);
+                });
+
+                if (devices.length === 0) {
+                    showStatus('未选择设备', 3000);
+                    return;
+                }
+
+                // 智能选择设备：优先选择具有raw_hid接口的设备
+                let selectedDeviceIndex = 0;
+                let bestDeviceIndex = 0;
+                let maxScore = 0;
+                
+                devices.forEach((d, idx) => {
+                    let score = 0;
+                    
+                    // 检查产品名称是否包含M6-B
+                    if (d.productName && d.productName.includes('M6-B')) {
+                        score += 10;
+                    }
+                    
+                    // 检查collections数量：优先选择collections数量为1的设备（VIA通信）
+                    if (d.collections && d.collections.length === 1) {
+                        score += 10;
+                    } else if (d.collections && d.collections.length > 0) {
+                        score += 5;
+                    }
+                    
+                    // 检查是否有outputReportLength为32的接口（raw_hid标准）
+                    if (d.collections) {
+                        d.collections.forEach(collection => {
+                            if (collection.usagePages) {
+                                collection.usagePages.forEach(usagePage => {
+                                    if (usagePage.usages) {
+                                        usagePage.usages.forEach(usage => {
+                                            if (usage.outputReports && usage.outputReports.length > 0) {
+                                                usage.outputReports.forEach(report => {
+                                                    if (report.reportLength === 32) {
+                                                        score += 8;
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    
+                    if (score > maxScore) {
+                        maxScore = score;
+                        bestDeviceIndex = idx;
+                    }
+                });
+                
+                selectedDeviceIndex = bestDeviceIndex;
+                console.log(`[DEBUG] Selected device ${selectedDeviceIndex} with score ${maxScore}`);
+
+                // 识别用户选择的设备类型
+                const selectedHidDevice = devices[selectedDeviceIndex];
+                const matchedDevice = SUPPORTED_DEVICES.find(device => 
+                    device.vid === selectedHidDevice.vendorId && 
+                    device.pid === selectedHidDevice.productId
+                );
+                
+                if (matchedDevice) {
+                    currentDevice = matchedDevice;
+                    KEY_COUNT = currentDevice.keyCount;
+                    
+                    // 更新设备选择器选中状态
+                    const deviceSelector = document.getElementById('deviceSelector');
+                    const deviceIndex = SUPPORTED_DEVICES.findIndex(d => 
+                        d.vid === matchedDevice.vid && d.pid === matchedDevice.pid
+                    );
+                    if (deviceIndex !== -1) {
+                        deviceSelector.value = deviceIndex;
+                    }
+                    
+                    console.log(`[DEBUG] Matched device: ${currentDevice.name}, KEY_COUNT: ${KEY_COUNT}`);
+                } else {
+                    console.warn('[WARN] Device not found in SUPPORTED_DEVICES, using default');
+                    currentDevice = SUPPORTED_DEVICES[0];
+                    KEY_COUNT = currentDevice.keyCount;
+                }
+
+                // 使用默认方式打开设备（WebHID不支持接口选择参数）
+                hidDevice = selectedHidDevice;
+                await hidDevice.open();
+                console.log('[DEBUG] Opened device successfully');
+                showStatus(`已连接 ${currentDevice.name}`, 3000);
+
+                // 尝试同时打开另一个设备用于键盘输入监听
+                let keyboardInputDevice = null;
+                if (devices.length > 1) {
+                    const otherDevice = devices[1 - selectedDeviceIndex]; // 选择另一个设备
+                    console.log('[DEBUG] Opening secondary device for keyboard input:', otherDevice);
+                    try {
+                        await otherDevice.open();
+                        keyboardInputDevice = otherDevice;
+                        console.log('[DEBUG] Secondary device opened successfully');
+                    } catch (e) {
+                        console.warn('[WARN] Failed to open secondary device:', e);
+                    }
+                }
+
+                // 设备断开处理
+                hidDevice.addEventListener('disconnect', () => {
+                    hidDevice = null;
+                    stopHeartbeat();
+                    connectPrompt.style.display = 'block';
+                    m6bKeyboard.style.display = 'none';
+                    deviceSelector.disabled = false; // 保持设备选择器可用
+                    showStatus('设备已断开', 3000);
+                });
+
+                // 显示键盘预览 + 激活键值面板
+                connectPrompt.style.display = 'none';
+                m6bKeyboard.style.display = 'grid';
+                deviceSelector.disabled = false; // 保持设备选择器可用
+                keySelectPanel.classList.add('active');
+
+                // 启动心跳机制保持连接
+                startHeartbeat();
+
+                // 验证VIA协议 + 读取所有键值
+                await sendVIAReport(VIA_COMMAND.GET_PROTOCOL, []);
+                await readAllKeys();
+
+                // 添加HID调试监听器 - 同时监听两个设备
+                setupHIDDebugListener(hidDevice);
+                if (keyboardInputDevice) {
+                    setupHIDDebugListener(keyboardInputDevice);
+                }
+
+                // 添加宏键监听器 - 同时监听两个设备
+                setupMacroTriggerListener(hidDevice);
+                if (keyboardInputDevice) {
+                    setupMacroTriggerListener(keyboardInputDevice);
+                }
+                
+                // 添加标准键盘事件监听器（作为备选方案）
+                setupStandardKeyboardListener();
+
+            } catch (error) {
+                showStatus(`连接失败: ${error.message}`, 5000);
+                console.error('HID 连接错误:', error);
+            }
+        }
+
+        function setupHIDDebugListener(keyboardInputDevice = null) {
+            // 优先使用keyboardInputDevice，如果没有则用hidDevice
+            const listeningDevice = keyboardInputDevice || hidDevice;
+            
+            if (!listeningDevice) return;
+
+            const debugHandler = (e) => {
+                const data = new Uint8Array(e.data.buffer);
+                const hexStr = Array.from(data).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                console.log('[HID DEBUG] ReportID:', e.reportId, 'Len:', data.length, 'Data:', hexStr);
+
+                // 标准HID键盘报告格式: data[0]=modifier, data[1]=reserved, data[2-7]=6个键码
+                // 检查所有位置
+                for (let i = 0; i < Math.min(data.length, 8); i++) {
+                    const key = data[i];
+                    // F13-F16: 0x68, 0x69, 0x6A, 0x6B
+                    if (key >= 0x68 && key <= 0x6B) {
+                        console.log('[HID DEBUG] F-key detected at pos', i, '=', key, '-> F' + (13 + key - 0x68));
+                    }
+                }
+            };
+
+            listeningDevice.addEventListener('inputreport', debugHandler);
+            console.log('[HID DEBUG] Debug listener setup complete');
+        }
+        
+        // 标准键盘事件监听器 - 监听浏览器键盘事件（已禁用，避免与HID监听器重复）
+        function setupStandardKeyboardListener() {
+            console.log('[MACRO] Standard keyboard event listener is disabled');
+            // 禁用此监听器，只使用HID监听器处理宏触发
+        }
+
+        // 宏触发键监听器 - 监控用户选择的触发键和M0-M15键码
+        let lastMacroTrigger = 0;
+
+        function setupMacroTriggerListener(keyboardInputDevice = null) {
+            // 优先使用keyboardInputDevice，如果没有则用hidDevice
+            const listeningDevice = keyboardInputDevice || hidDevice;
+            
+            if (!listeningDevice) {
+                console.log('[MACRO] No HID device, cannot setup listener');
+                return;
+            }
+
+            console.log('[MACRO] Listening device info:', listeningDevice.productName, listeningDevice.vendorId, listeningDevice.productId);
+            console.log('[MACRO] Listening device opened:', listeningDevice.opened);
+
+            // 移除网页内的宏触发监听器
+            // 宏应该由键盘固件执行，而不是网页
+            const macroHandler = (e) => {
+                // 空函数 - 不处理任何宏触发
+                // 宏由键盘固件直接执行，关闭网页后也能生效
+            };
+
+            // 使用相同的事件监听器（只添加一次）
+            if (!window.macroHidListenerAdded) {
+                listeningDevice.addEventListener('inputreport', macroHandler);
+                window.macroHidListenerAdded = true;
+                console.log('[MACRO] Macro trigger listener setup complete, listening for keys');
+                
+                // 添加设备断开监听
+                listeningDevice.addEventListener('disconnect', () => {
+                    console.log('[MACRO] HID device disconnected');
+                    window.macroHidListenerAdded = false; // 断开时重置标志
+                });
+            } else {
+                console.log('[MACRO] Macro trigger listener already added');
+            }
+
+        }
+        
+        // 禁用浏览器keydown监听器，只使用HID监听器处理宏触发
+        // 这样可以避免重复触发问题
+        function handleKeyDown(e) {
+            // 空函数 - 宏触发只通过HID监听器处理
+        }
+        
+        // 初始化宏触发状态（不添加浏览器监听器）
+        if (!window.macroKeydownListenerAdded) {
+            window.isMacroTriggering = false;
+            window.macroKeydownListenerAdded = true;
+            console.log('[MACRO] Macro handler initialized (HID only)');
+        }
+
+        function triggerMacroOutput(macroIndex) {
+            // 先保存当前宏内容
+            saveCurrentMacro();
+
+            const text = macros[macroIndex];
+            console.log('[MACRO] triggerMacroOutput called, index:', macroIndex, 'text:', text ? text.substring(0, 20) + '...' : 'EMPTY');
+
+            // 允许空宏（空宏不输出任何内容）
+            if (!text) {
+                console.log('[MACRO] Empty macro, nothing to output');
+                return;
+            }
+
+            // 获取当前焦点元素
+            const activeElement = document.activeElement;
+            console.log('[MACRO] Active element:', activeElement ? activeElement.tagName : 'null', 
+                       activeElement ? 'isContentEditable=' + activeElement.isContentEditable : '');
+
+            // 尝试直接输入到焦点元素
+            if (activeElement) {
+                const isInput = activeElement.tagName === 'INPUT';
+                const isTextarea = activeElement.tagName === 'TEXTAREA';
+                const isEditable = activeElement.isContentEditable;
+                
+                console.log('[MACRO] isInput:', isInput, ', isTextarea:', isTextarea, ', isEditable:', isEditable);
+
+                if (isInput || isTextarea || isEditable) {
+                    insertTextIntoInput(activeElement, text);
+                    console.log('[MACRO] Text inserted into active element');
+                    showStatus('宏M' + macroIndex + '已输出', 2000);
+                    return;
+                }
+            }
+
+            // 尝试查找页面上的宏输入框
+            const macroTextarea = document.getElementById('macroTextArea');
+            if (macroTextarea) {
+                console.log('[MACRO] Found macro textarea, inserting text');
+                insertTextIntoInput(macroTextarea, text);
+                showStatus('宏M' + macroIndex + '已输出到宏编辑框', 2000);
+                return;
+            }
+
+            // 回退到剪贴板
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    console.log('[MACRO] Copied to clipboard successfully');
+                    showStatus('宏M' + macroIndex + '已复制到剪贴板', 2000);
+                }).catch((err) => {
+                    console.error('[MACRO] Clipboard failed:', err);
+                    showStatus('复制失败', 3000);
+                });
+            } else {
+                showStatus('复制失败', 3000);
+            }
+        }
+
+        function insertTextIntoInput(inputElement, text) {
+            // 保存光标位置
+            const startPos = inputElement.selectionStart;
+            const endPos = inputElement.selectionEnd;
+
+            if (inputElement.tagName === 'INPUT' || inputElement.tagName === 'TEXTAREA') {
+                // 对于 input 和 textarea
+                const before = inputElement.value.substring(0, startPos);
+                const after = inputElement.value.substring(endPos);
+                inputElement.value = before + text + after;
+                inputElement.selectionStart = inputElement.selectionEnd = startPos + text.length;
+            } else if (inputElement.isContentEditable) {
+                // 对于 contenteditable
+                const before = window.getSelection().anchorOffset;
+                document.execCommand('insertText', false, text);
+            }
+
+            // 触发 input 事件以更新绑定
+            inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        function simulateMacroInput(text) {
+            console.log('[MACRO] simulateMacroInput called, text length:', text.length);
+
+            const activeElement = document.activeElement;
+            const isInputField = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
+
+            console.log('[MACRO] activeElement:', activeElement ? activeElement.tagName : 'null', 'isInputField:', isInputField);
+
+            if (isInputField) {
+                // 直接插入文本
+                const start = activeElement.selectionStart;
+                const end = activeElement.selectionEnd;
+                const before = activeElement.value.substring(0, start);
+                const after = activeElement.value.substring(end);
+                activeElement.value = before + text + after;
+                activeElement.selectionStart = activeElement.selectionEnd = start + text.length;
+                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                showStatus('宏文本已输入', 2000);
+                console.log('[MACRO] Text inserted into input field');
+            } else {
+                // 尝试使用execCommand复制
+                try {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.cssText = 'position:fixed;top:0;left:0;width:100px;height:50px;opacity:0;';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+
+                    const success = document.execCommand('copy');
+                    document.body.removeChild(textArea);
+
+                    if (success) {
+                        showStatus('宏M' + currentMacroIndex + '已复制（execCommand），按Ctrl+V粘贴', 3000);
+                        console.log('[MACRO] execCommand copy success');
+                    } else {
+                        showStatus('请在输入框中点击，然后触发宏', 3000);
+                        console.log('[MACRO] execCommand copy failed');
+                    }
+                } catch (e) {
+                    console.error('[MACRO] execCommand error:', e);
+                    showStatus('请在输入框中点击，然后触发宏', 3000);
+                }
+            }
+        }
+
+        // ========== 宏面板功能函数 ==========
+        
+        let isRecording = false;
+        let recordedSequence = [];
+
+        function toggleMacroMode(mode) {
+            const scriptMode = document.getElementById('macroScriptMode');
+            const recordMode = document.getElementById('macroRecordMode');
+            const scriptBtn = document.querySelector('.macro-mode-btn[data-mode="script"]');
+            const recordBtn = document.querySelector('.macro-mode-btn[data-mode="record"]');
+
+            if (mode === 'script') {
+                scriptMode.style.display = 'block';
+                recordMode.style.display = 'none';
+                scriptBtn.classList.add('active');
+                recordBtn.classList.remove('active');
+            } else {
+                scriptMode.style.display = 'none';
+                recordMode.style.display = 'block';
+                scriptBtn.classList.remove('active');
+                recordBtn.classList.add('active');
+            }
+        }
+
+        function loadMacroContent() {
+            const selector = document.getElementById('macroSelector');
+            const textArea = document.getElementById('macroTextArea');
+            const macroIndex = parseInt(selector.value);
+            
+            if (macros[macroIndex] !== undefined) {
+                textArea.value = macros[macroIndex];
+            } else {
+                textArea.value = '';
+            }
+            updateMacroBufferInfo();
+        }
+
+        function textToQMKKeycodes(text) {
+            const keycodes = [];
+            
+            // 字符到QMK按键码的映射 (基于USB HID扫描码)
+            const charMap = {
+                'A': 0x04, 'B': 0x05, 'C': 0x06, 'D': 0x07, 'E': 0x08, 'F': 0x09, 'G': 0x0A, 'H': 0x0B,
+                'I': 0x0C, 'J': 0x0D, 'K': 0x0E, 'L': 0x0F, 'M': 0x10, 'N': 0x11, 'O': 0x12, 'P': 0x13,
+                'Q': 0x14, 'R': 0x15, 'S': 0x16, 'T': 0x17, 'U': 0x18, 'V': 0x19, 'W': 0x1A, 'X': 0x1B,
+                'Y': 0x1C, 'Z': 0x1D,
+                'a': 0x04, 'b': 0x05, 'c': 0x06, 'd': 0x07, 'e': 0x08, 'f': 0x09, 'g': 0x0A, 'h': 0x0B,
+                'i': 0x0C, 'j': 0x0D, 'k': 0x0E, 'l': 0x0F, 'm': 0x10, 'n': 0x11, 'o': 0x12, 'p': 0x13,
+                'q': 0x14, 'r': 0x15, 's': 0x16, 't': 0x17, 'u': 0x18, 'v': 0x19, 'w': 0x1A, 'x': 0x1B,
+                'y': 0x1C, 'z': 0x1D,
+                '0': 0x27, '1': 0x1E, '2': 0x1F, '3': 0x20, '4': 0x21, '5': 0x22, '6': 0x23, '7': 0x24,
+                '8': 0x25, '9': 0x26,
+                ' ': 0x2C,
+                '\n': 0x28, '\r': 0x28,
+                '-': 0x2D, '_': 0x2D, '=': 0x2E, '+': 0x2E,
+                '[': 0x2F, '{': 0x2F, ']': 0x30, '}': 0x30,
+                '\\': 0x31, '|': 0x31,
+                ';': 0x33, ':': 0x33, '\'': 0x34, '"': 0x34,
+                '`': 0x35, '~': 0x35,
+                ',': 0x36, '<': 0x36, '.': 0x37, '>': 0x37,
+                '/': 0x38, '?': 0x38
+            };
+            
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const keycode = charMap[char];
+                
+                if (keycode !== undefined) {
+                    // 按下按键 (低字节)
+                    keycodes.push(keycode);
+                    // 释放按键 (高字节, bit7=1)
+                    keycodes.push(keycode | 0x80);
+                } else {
+                    console.warn(`[MACRO] Unsupported character: "${char}" (${char.charCodeAt(0)})`);
+                }
+            }
+            
+            console.log(`[MACRO] Generated ${keycodes.length} keycodes for text "${text}"`);
+            return keycodes;
+        }
+
+        function saveCurrentMacro() {
+            const selector = document.getElementById('macroSelector');
+            const textArea = document.getElementById('macroTextArea');
+            const macroIndex = parseInt(selector.value);
+            
+            console.log(`[MACRO DEBUG] saveCurrentMacro - macroIndex: ${macroIndex}`);
+            console.log(`[MACRO DEBUG] saveCurrentMacro - textArea.value: "${textArea.value}"`);
+            console.log(`[MACRO DEBUG] saveCurrentMacro - textArea.value.length: ${textArea.value.length}`);
+            
+            macros[macroIndex] = textArea.value;
+            console.log(`[MACRO DEBUG] saveCurrentMacro - macros[${macroIndex}] = "${macros[macroIndex]}"`);
+            
+            saveMacros();
+            updateMacroBufferInfo();
+        }
+
+        function saveAllMacros() {
+            saveCurrentMacro();
+            
+            if (!hidDevice) {
+                showStatus('请先连接键盘', 3000);
+                return;
+            }
+
+            (async () => {
+                try {
+                    await writeMacrosToKeyboard();
+                } catch (e) {
+                    console.error('保存宏失败:', e);
+                    showStatus('保存失败: ' + e.message, 3000);
+                }
+            })();
+        }
+
+        function testCurrentMacro() {
+            const selector = document.getElementById('macroSelector');
+            const macroIndex = parseInt(selector.value);
+            
+            saveCurrentMacro();
+            
+            const text = macros[macroIndex];
+            // 允许空宏（空宏不输出任何内容）
+            if (!text) {
+                console.log('[MACRO] Empty macro, nothing to output');
+                return;
+            }
+            
+            // 直接输出到测试输入框
+            const testInput = document.getElementById('macroTestInput');
+            if (testInput) {
+                testInput.value = text;
+                testInput.focus();
+                testInput.select();
+                showStatus(`宏M${macroIndex}已输出到测试区域`, 2000);
+            } else {
+                showStatus('测试输入框未找到', 3000);
+            }
+        }
+
+        function clearCurrentMacro() {
+            const selector = document.getElementById('macroSelector');
+            const textArea = document.getElementById('macroTextArea');
+            const macroIndex = parseInt(selector.value);
+            
+            textArea.value = '';
+            macros[macroIndex] = '';
+            saveMacrosToLocalStorage();
+            updateMacroBufferInfo();
+            showStatus('宏已清空', 2000);
+        }
+
+        function startMacroRecording() {
+            isRecording = true;
+            recordedSequence = [];
+            
+            const startBtn = document.getElementById('startRecordBtn');
+            const stopBtn = document.getElementById('stopRecordBtn');
+            const status = document.getElementById('recordStatus');
+            const recordedKeys = document.getElementById('recordedKeys');
+            
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'inline-block';
+            status.textContent = '正在录制... 按任意键录制，按停止按钮结束';
+            status.style.color = '#dc3545';
+            recordedKeys.textContent = '';
+            
+            document.addEventListener('keydown', recordKeyDown);
+        }
+
+        function recordKeyDown(e) {
+            if (!isRecording) return;
+            
+            // 忽略修饰键单独按下
+            if (e.key === 'Control' || e.key === 'Shift' || e.key === 'Alt' || e.key === 'Meta') {
+                return;
+            }
+            
+            e.preventDefault();
+            
+            const keyCode = keyToQMKCode(e.key);
+            if (keyCode) {
+                recordedSequence.push(keyCode);
+                updateRecordedKeysDisplay();
+            }
+        }
+
+        function updateRecordedKeysDisplay() {
+            const recordedKeys = document.getElementById('recordedKeys');
+            recordedKeys.textContent = recordedSequence.join(', ');
+        }
+
+        function stopMacroRecording() {
+            isRecording = false;
+            
+            const startBtn = document.getElementById('startRecordBtn');
+            const stopBtn = document.getElementById('stopRecordBtn');
+            const status = document.getElementById('recordStatus');
+            
+            startBtn.style.display = 'inline-block';
+            stopBtn.style.display = 'none';
+            status.textContent = '录制完成';
+            status.style.color = '#28a745';
+            
+            document.removeEventListener('keydown', recordKeyDown);
+            
+            // 将录制的键码转换为宏脚本格式
+            if (recordedSequence.length > 0) {
+                const scriptText = recordedSequence.map(code => `{${code}}`).join('');
+                document.getElementById('macroTextArea').value = scriptText;
+                toggleMacroMode('script');
+            }
+        }
+
+        function updateMacroBufferInfo() {
+            const textArea = document.getElementById('macroTextArea');
+            const content = textArea.value;
+            const bytesUsed = content.length * 2; // 估算字节数
+            const maxBytes = 512;
+            const percentage = Math.min((bytesUsed / maxBytes) * 100, 100);
+            
+            const progressFill = document.getElementById('macroProgressFill');
+            const bufferInfo = document.getElementById('macroBufferInfo');
+            
+            if (progressFill) {
+                progressFill.style.width = percentage + '%';
+            }
+            if (bufferInfo) {
+                bufferInfo.textContent = bytesUsed + ' / ' + maxBytes + ' bytes';
+            }
+        }
+
+        function keyToQMKCode(key) {
+            const keyMap = {
+                'Backspace': 'KC_BSPC',
+                'Tab': 'KC_TAB',
+                'Enter': 'KC_ENT',
+                'Shift': 'KC_LSFT',
+                'Control': 'KC_LCTL',
+                'Alt': 'KC_LALT',
+                'CapsLock': 'KC_CAPS',
+                'Escape': 'KC_ESC',
+                'Space': 'KC_SPC',
+                'PageUp': 'KC_PGUP',
+                'PageDown': 'KC_PGDN',
+                'End': 'KC_END',
+                'Home': 'KC_HOME',
+                'ArrowLeft': 'KC_LEFT',
+                'ArrowUp': 'KC_UP',
+                'ArrowRight': 'KC_RGHT',
+                'ArrowDown': 'KC_DOWN',
+                'Insert': 'KC_INS',
+                'Delete': 'KC_DEL',
+                '~': 'KC_GRV',
+                '!': 'KC_EXLM',
+                '@': 'KC_AT',
+                '#': 'KC_HASH',
+                '$': 'KC_DLR',
+                '%': 'KC_PERC',
+                '^': 'KC_CIRC',
+                '&': 'KC_AMPR',
+                '*': 'KC_ASTR',
+                '(': 'KC_LPRN',
+                ')': 'KC_RPRN',
+                '-': 'KC_MINS',
+                '_': 'KC_UNDS',
+                '=': 'KC_EQL',
+                '+': 'KC_PLUS',
+                '[': 'KC_LBRC',
+                '{': 'KC_LCBR',
+                ']': 'KC_RBRC',
+                '}': 'KC_RCBR',
+                '\\': 'KC_BSLS',
+                '|': 'KC_PIPE',
+                ';': 'KC_SCLN',
+                ':': 'KC_COLN',
+                '\'': 'KC_QUOT',
+                '"': 'KC_DQUO',
+                ',': 'KC_COMM',
+                '<': 'KC_LT',
+                '.': 'KC_DOT',
+                '>': 'KC_GT',
+                '/': 'KC_SLSH',
+                '?': 'KC_QUES'
+            };
+            
+            if (key.length === 1) {
+                return 'KC_' + key.toUpperCase();
+            }
+            
+            return keyMap[key] || null;
+        }
+
+        // ========== 宏面板功能函数结束 ==========
+
+        // 读取单个按键值（修复16位键值解析）
+        async function readKey(keyIndex, layer = CURRENT_LAYER) {
+            if (!hidDevice) return 0;
+
+            try {
+                // 发送读取指令：[0x04, 层, 行, 列]
+                await sendVIAReport(VIA_COMMAND.GET_KEYCODE, [layer, 0, keyIndex]);
+                
+                // 等待响应（5秒超时）
+                const keyCode = await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => reject(new Error('读取超时')), 5000);
+                    const onInput = (e) => {
+                        // VIA协议：命令用reportId=1发送，但响应可能用reportId=0或reportId=1
+                        if (e.reportId === 0 || e.reportId === 1) {
+                            clearTimeout(timeout);
+                            hidDevice.removeEventListener('inputreport', onInput);
+                            const data = new Uint8Array(e.data.buffer);
+                            
+                            // 打印原始响应数据，用于调试
+                            console.log(`[DEBUG] Read key ${keyIndex} response:`, Array.from(data));
+                            
+                            // 健壮性处理：检查数据长度
+                            if (data.length >= 6) {
+                                // 标准VIA协议：高8位在前，低8位在后
+                                const code = (data[4] << 8) | data[5];
+                                console.log(`[DEBUG] Parsed key code: ${code} (0x${code.toString(16).padStart(4, '0')})`);
+                                resolve(code);
+                            } else if (data.length >= 5) {
+                                // 兼容模式：只使用低8位
+                                const code = data[4];
+                                console.log(`[DEBUG] Using 8-bit key code: ${code} (0x${code.toString(16).padStart(2, '0')})`);
+                                resolve(code);
+                            } else {
+                                console.error(`[ERROR] Insufficient data length: ${data.length}`);
+                                resolve(0); // 返回0表示错误
+                            }
+                        }
+                    };
+                    hidDevice.addEventListener('inputreport', onInput);
+                });
+                return keyCode;
+
+            } catch (error) {
+                console.error(`[ERROR] Read key ${keyIndex} error:`, error);
+                showStatus(`读取按键${keyIndex+1}失败: ${error.message}`, 3000);
+                return 0;
+            }
+        }
+        
+        // 心跳机制 - 保持WebHID连接活跃
+        function startHeartbeat() {
+            // 清除已有的心跳
+            if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+            }
+            
+            // 每30秒发送一次读取请求保持连接
+            heartbeatTimer = setInterval(async () => {
+                if (hidDevice && hidDevice.opened) {
+                    try {
+                        // 发送一个简单的读取命令保持连接活跃
+                        await sendVIAReport(VIA_COMMAND.GET_PROTOCOL, []);
+                        console.log('[HEARTBEAT] Connection kept alive');
+                    } catch (error) {
+                        console.error('[HEARTBEAT] Error:', error);
+                    }
+                }
+            }, 30000); // 30秒心跳
+        }
+        
+        // 停止心跳
+        function stopHeartbeat() {
+            if (heartbeatTimer) {
+                clearInterval(heartbeatTimer);
+                heartbeatTimer = null;
+                console.log('[HEARTBEAT] Stopped');
+            }
+        }
+
+        // 自动读取所有按键并显示
+        async function readAllKeys() {
+            showStatus('正在读取当前键位配置...', 2000);
+            console.log(`[DEBUG] Reading all keys for layer ${CURRENT_LAYER}`);
+            
+            // 逐个读取（避免固件响应冲突）
+            const keyCodes = [];
+            for (let i = 0; i < KEY_COUNT; i++) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                const keyCode = await readKey(i);
+                keyCodes.push(keyCode);
+                const displayText = keyCodeToText[keyCode] || `0x${keyCode.toString(16).padStart(4, '0')}`;
+                m6bKeys[i].textContent = displayText;
+                console.log(`[DEBUG] Key ${i}: code=${keyCode} (0x${keyCode.toString(16).padStart(4, '0')}), display=${displayText}`);
+            }
+            
+            console.log(`[DEBUG] All key codes:`, keyCodes);
+            showStatus('键位配置读取完成', 2000);
+        }
+
+        // 写入按键值（核心修复：Win/F1-F12的16位字节拆分）
+        async function writeKey(keyIndex, keyCode) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 2000);
+                return;
+            }
+
+            try {
+                // 严格拆分16位键值为高低字节（必须！）
+                const keycodeH = (keyCode >> 8) & 0xFF; // 高8位
+                const keycodeL = keyCode & 0xFF;        // 低8位
+                
+                // VIA协议格式：SET_KEYCODE [0x05] [层] [行] [列] [高字节] [低字节]
+                // M6-B键盘：6个键排成一行，所以行=0，列=keyIndex
+                const row = 0;
+                const col = keyIndex;
+                
+                console.log(`[KEY] Writing key ${keyIndex} (row=${row}, col=${col}): 0x${keyCode.toString(16).padStart(4, '0')} = 0x${keycodeH.toString(16).padStart(2, '0')} 0x${keycodeL.toString(16).padStart(2, '0')}`);
+                console.log(`[KEY] Command: SET_KEYCODE (0x05), layer=${CURRENT_LAYER}, row=${row}, col=${col}, keycodeH=0x${keycodeH.toString(16)}, keycodeL=0x${keycodeL.toString(16)}`);
+                
+                // 发送写入指令：[0x05, 层, 行, 列, 高字节, 低字节]
+                await sendVIAReport(VIA_COMMAND.SET_KEYCODE, [
+                    CURRENT_LAYER, row, col, keycodeH, keycodeL
+                ]);
+                
+                // 立即更新显示
+                const displayText = keyCodeToText[keyCode] || `0x${keyCode.toString(16).padStart(4, '0')}`;
+                m6bKeys[keyIndex].textContent = displayText;
+                showStatus(`已将按键 [${keyIndex+1}] 设置为 ${displayText}`, 2000);
+                
+                // 验证写入：立即读取该键值
+                setTimeout(async () => {
+                    const readCode = await readKey(keyIndex, CURRENT_LAYER);
+                    console.log(`[KEY] Verify write: key ${keyIndex} = 0x${readCode.toString(16).padStart(4, '0')} (expected 0x${keyCode.toString(16).padStart(4, '0')})`);
+                    if (readCode === keyCode) {
+                        console.log('[KEY] ✅ Write verified successfully!');
+                    } else {
+                        console.log('[KEY] ❌ Write verification FAILED!');
+                    }
+                }, 500);
+
+            } catch (error) {
+                showStatus(`写入按键失败: ${error.message}`, 3000);
+                console.error('写入键值错误:', error);
+            }
+        }
+
+        // ===== 界面交互优化 =====
+        // 绑定键盘按键选中
+        function bindKeySelection() {
+            m6bKeys.forEach((key, index) => {
+                key.addEventListener('click', () => {
+                    // 取消其他按键选中状态
+                    m6bKeys.forEach(k => k.classList.remove('selected'));
+                    // 选中当前按键并闪烁
+                    key.classList.add('selected');
+                    selectedKeyIndex = index;
+                    showStatus(`已选中按键 [${index+1}]，点击右侧键值即可修改`, 3000);
+                });
+            });
+
+            // 绑定键值面板点击（自动写入）
+            keyOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    if (selectedKeyIndex === null) {
+                        showStatus('请先选中键盘上的按键', 2000);
+                        return;
+                    }
+                    // 获取选中的键值并写入
+                    const keyCode = parseInt(option.dataset.keyCode);
+                    writeKey(selectedKeyIndex, keyCode);
+                    // 取消选中状态
+                    m6bKeys[selectedKeyIndex].classList.remove('selected');
+                    selectedKeyIndex = null;
+                });
+            });
+            
+            // 绑定灯光控制按钮点击（直接发送命令，不修改键值）
+            const lightingOptions = document.querySelectorAll('.lighting-controls .key-option');
+            lightingOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const keyCode = parseInt(option.dataset.keyCode);
+                    // 直接发送灯光控制命令
+                    const keycodeH = (keyCode >> 8) & 0xFF;
+                    const keycodeL = keyCode & 0xFF;
+                    sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, keycodeH, keycodeL]);
+                    showStatus(`已发送灯光控制命令: ${option.textContent}`, 2000);
+                });
+            });
+        }
+
+        // 标签页切换（新增功能键面板切换）
+        function bindTabSwitch() {
+            const keyMappingArea = document.querySelector('.key-mapping-area');
+            const lightingSettingsArea = document.querySelector('.lighting-settings-area');
+            const layerTab = document.getElementById('layerTab');
+            const specialTab = document.getElementById('specialTab');
+            
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 切换标签按钮状态
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // 切换标签内容
+                    const tabId = btn.dataset.tab;
+                    tabContents.forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    
+                    // 控制各个区域的显示/隐藏
+                    if (tabId === 'special') {
+                        // 灯光设置
+                        keyMappingArea.style.display = 'none';
+                        lightingSettingsArea.style.display = 'block';
+                        layerTab.style.display = 'none';
+                        specialTab.style.display = 'none';
+                    } else if (tabId === 'layer') {
+                        // 换层设置 - 在key-mapping-area中显示
+                        keyMappingArea.style.display = 'block';
+                        lightingSettingsArea.style.display = 'none';
+                        specialTab.style.display = 'none';
+                        layerTab.style.display = 'block';
+                    } else {
+                        // 其他标签（基础、功能、媒体、宏）
+                        keyMappingArea.style.display = 'block';
+                        lightingSettingsArea.style.display = 'none';
+                        document.getElementById(`${tabId}Tab`).style.display = 'block';
+                    }
+                    
+                    showStatus(`切换到 ${btn.textContent} 面板`, 1000);
+                });
+            });
+        }
+
+        // 灯光分类标签切换
+        function bindLightingCategorySwitch() {
+            const categoryBtns = document.querySelectorAll('.lighting-tab-btn');
+            const lightingContent = document.getElementById('lightingContent');
+            const specialContent = document.getElementById('specialContent');
+            
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 切换按钮状态
+                    categoryBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // 切换内容
+                    const category = btn.dataset.category;
+                    if (category === 'lighting') {
+                        lightingContent.style.display = 'block';
+                        specialContent.style.display = 'none';
+                    } else if (category === 'special') {
+                        lightingContent.style.display = 'none';
+                        specialContent.style.display = 'block';
+                    }
+                });
+            });
+        }
+
+        // 换层滚动条拖拽功能
+        function bindLayerScrollbar() {
+            const wrapper = document.querySelector('.layer-panel-wrapper');
+            const scrollbar = document.querySelector('.layer-scrollbar');
+            const thumb = document.querySelector('.layer-scrollbar-thumb');
+            
+            if (!wrapper || !scrollbar || !thumb) return;
+            
+            let isDragging = false;
+            let startX = 0;
+            let startScrollLeft = 0;
+            
+            thumb.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX;
+                startScrollLeft = wrapper.scrollLeft;
+                scrollbar.classList.add('dragging');
+                document.body.style.cursor = 'grabbing';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                const scrollWidth = wrapper.scrollWidth - wrapper.clientWidth;
+                const trackWidth = scrollbar.offsetWidth - thumb.offsetWidth;
+                
+                if (scrollWidth > 0 && trackWidth > 0) {
+                    const scrollPercent = deltaX / trackWidth;
+                    wrapper.scrollLeft = startScrollLeft + scrollWidth * scrollPercent;
+                }
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    scrollbar.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+            
+            // 点击滚动条轨道跳转
+            scrollbar.addEventListener('click', (e) => {
+                if (e.target === scrollbar || e.target === scrollbar.querySelector('.layer-scrollbar-track')) {
+                    const rect = scrollbar.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const trackWidth = scrollbar.offsetWidth - thumb.offsetWidth;
+                    const scrollWidth = wrapper.scrollWidth - wrapper.clientWidth;
+                    
+                    if (scrollWidth > 0 && trackWidth > 0) {
+                        const scrollPercent = clickX / scrollbar.offsetWidth;
+                        wrapper.scrollLeft = scrollWidth * scrollPercent;
+                    }
+                }
+            });
+        }
+
+        // 拖拽分隔条功能
+        function bindDragHandle() {
+            const dragHandle = document.getElementById('dragHandle');
+            const keyboardPreview = document.getElementById('keyboardPreview');
+            const bottomPanel = document.querySelector('.bottom-panel');
+            const mainContainer = document.querySelector('.main-container');
+            
+            let isDragging = false;
+            
+            dragHandle.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const containerRect = mainContainer.getBoundingClientRect();
+                const containerHeight = containerRect.height;
+                const mouseY = e.clientY - containerRect.top;
+                
+                // 限制拖拽范围
+                const minPreviewHeight = 150;
+                const minBottomHeight = 180;
+                
+                let previewHeight = mouseY;
+                
+                if (previewHeight < minPreviewHeight) {
+                    previewHeight = minPreviewHeight;
+                }
+                if (previewHeight > containerHeight - minBottomHeight) {
+                    previewHeight = containerHeight - minBottomHeight;
+                }
+                
+                const previewPercent = (previewHeight / containerHeight) * 100;
+                
+                keyboardPreview.style.flex = `0 0 ${previewPercent}%`;
+                bottomPanel.style.flex = `0 0 ${100 - previewPercent}%`;
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            });
+        }
+
+        // 层切换
+        function bindLayerSwitch() {
+            layerBtns.forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    layerBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const layer = parseInt(btn.dataset.layer);
+                    CURRENT_LAYER = layer;
+                    showStatus(`切换到第 ${layer} 层`, 1000);
+
+                    // 如果已连接设备，立即读取该层键值
+                    if (hidDevice && hidDevice.opened) {
+                        await readAllKeys();
+                    }
+                });
+            });
+        }
+
+        function bindThemeSwitch() {
+            const themeBtns = document.querySelectorAll('.theme-btn');
+            themeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const theme = btn.dataset.theme;
+
+                    // 切换按钮激活状态
+                    themeBtns.forEach(b => {
+                        b.classList.remove('active');
+                        b.style.border = '2px solid #555';
+                    });
+                    btn.classList.add('active');
+                    btn.style.border = '2px solid #fff';
+
+                    // 应用主题到body
+                    document.body.setAttribute('data-theme', theme);
+
+                    // 保存到localStorage
+                    localStorage.setItem('m6b-theme', theme);
+
+                    showStatus(`已切换到${btn.title}`, 1500);
+                });
+            });
+        }
+        
+        // 备份功能 - 使用 File System Access API 保存到指定文件夹
+        async function backupHTML() {
+            try {
+                showStatus('正在备份...', 2000);
+                
+                // 获取当前HTML内容
+                const htmlContent = document.documentElement.outerHTML;
+                
+                // 创建时间戳
+                const now = new Date();
+                const timestamp = now.getFullYear().toString() +
+                                String(now.getMonth() + 1).padStart(2, '0') +
+                                String(now.getDate()).padStart(2, '0') + '_' +
+                                String(now.getHours()).padStart(2, '0') +
+                                String(now.getMinutes()).padStart(2, '0') +
+                                String(now.getSeconds()).padStart(2, '0');
+                const filename = `index_${timestamp}.html`;
+                
+                try {
+                    // 尝试使用 File System Access API 保存到指定文件夹
+                    if ('showSaveFilePicker' in window) {
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: filename,
+                            types: [{
+                                description: 'HTML文件',
+                                accept: { 'text/html': ['.html'] }
+                            }]
+                        });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(htmlContent);
+                        await writable.close();
+                        showStatus(`备份成功: ${filename}`, 3000);
+                    } else {
+                        throw new Error('File System Access API not supported');
+                    }
+                } catch (fsError) {
+                    // 如果 File System Access API 失败，回退到传统下载
+                    console.log('Falling back to traditional download');
+                    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showStatus(`备份成功: ${filename} (已保存到下载目录)`, 3000);
+                }
+            } catch (error) {
+                showStatus(`备份失败: ${error.message}`, 3000);
+                console.error('Backup error:', error);
+            }
+        }
+
+        // ===== 初始化 =====
+        
+        // 初始化设备选择器
+        function initDeviceSelector() {
+            const deviceSelector = document.getElementById('deviceSelector');
+            
+            // 清空现有选项
+            deviceSelector.innerHTML = '';
+            
+            // 添加所有支持的设备
+            SUPPORTED_DEVICES.forEach((device, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = device.name;
+                deviceSelector.appendChild(option);
+            });
+            
+            // 绑定设备选择事件
+            deviceSelector.addEventListener('change', async (e) => {
+                const selectedIndex = parseInt(e.target.value);
+                const selectedDevice = SUPPORTED_DEVICES[selectedIndex];
+                
+                // 如果选择的是当前设备，不做处理
+                if (selectedDevice.vid === currentDevice.vid && selectedDevice.pid === currentDevice.pid) {
+                    return;
+                }
+                
+                // 如果当前已连接设备，先断开
+                if (hidDevice) {
+                    try {
+                        await hidDevice.close();
+                    } catch (error) {
+                        console.warn('断开设备失败:', error);
+                    }
+                    hidDevice = null;
+                    stopHeartbeat();
+                    connectPrompt.style.display = 'block';
+                    m6bKeyboard.style.display = 'none';
+                }
+                
+                // 更新当前设备
+                currentDevice = selectedDevice;
+                KEY_COUNT = currentDevice.keyCount;
+                console.log(`[DEBUG] Selected device: ${currentDevice.name}, KEY_COUNT: ${KEY_COUNT}`);
+                showStatus(`已选择 ${currentDevice.name}`, 2000);
+            });
+            
+            // 灯光控制事件
+            document.getElementById('brightnessSlider').addEventListener('input', function() {
+                document.getElementById('brightnessValue').textContent = this.value;
+                updateLightingPreview();
+            });
+            
+            document.getElementById('speedSlider').addEventListener('input', function() {
+                document.getElementById('speedValue').textContent = this.value;
+            });
+            
+            document.getElementById('rgbBrightnessSlider').addEventListener('input', function() {
+                document.getElementById('rgbBrightnessValue').textContent = this.value;
+                updateLightingPreview();
+            });
+            
+            document.getElementById('rgbSpeedSlider').addEventListener('input', function() {
+                document.getElementById('rgbSpeedValue').textContent = this.value;
+            });
+            
+            document.getElementById('colorPicker').addEventListener('change', function() {
+                updateLightingPreview();
+            });
+            
+            document.getElementById('rgbColorPicker').addEventListener('change', function() {
+                updateLightingPreview();
+            });
+            
+            // 灯光控制按钮
+            document.getElementById('lightOnBtn').addEventListener('click', function() {
+                sendLightingCommand('LM_ON');
+            });
+            
+            document.getElementById('lightOffBtn').addEventListener('click', function() {
+                sendLightingCommand('LM_OFF');
+            });
+            
+            document.getElementById('saveLightingBtn').addEventListener('click', function() {
+                saveLightingSettings();
+            });
+            
+            // 效果选择器
+            document.getElementById('effectSelector').addEventListener('change', function() {
+                const effectIndex = parseInt(this.value);
+                sendLightingEffect(effectIndex);
+            });
+            
+            document.getElementById('rgbEffectSelector').addEventListener('change', function() {
+                const effectIndex = parseInt(this.value);
+                sendRGBEffect(effectIndex);
+            });
+            
+            // 颜色选择器
+            document.getElementById('colorPicker').addEventListener('change', function() {
+                const color = this.value;
+                sendLightingColor(color);
+            });
+            
+            document.getElementById('rgbColorPicker').addEventListener('change', function() {
+                const color = this.value;
+                sendRGBColor(color);
+            });
+            
+            // 高级灯光控制事件
+            document.getElementById('saveAdvancedBtn').addEventListener('click', function() {
+                saveAdvancedLightingSettings();
+            });
+            
+            // 灯光子标签切换
+            document.querySelectorAll('.lighting-nav-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tab = this.getAttribute('data-lighting-tab');
+                    
+                    // 移除所有激活状态
+                    document.querySelectorAll('.lighting-nav-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.lighting-tab-panel').forEach(p => p.style.display = 'none');
+                    
+                    // 激活当前标签
+                    this.classList.add('active');
+                    document.getElementById(`lighting${tab.charAt(0).toUpperCase() + tab.slice(1)}Tab`).style.display = 'block';
+                });
+            });
+            
+            // EEPROM查看器事件
+            document.getElementById('readEepromBtn').addEventListener('click', async function() {
+                await readEEPROM();
+            });
+            
+            document.getElementById('saveEepromBtn').addEventListener('click', function() {
+                saveEEPROMToFile();
+            });
+        }
+        
+        // 发送灯光控制命令
+        async function sendLightingCommand(command) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            const commandMap = {
+                'LM_ON': 0x7810,
+                'LM_OFF': 0x7811,
+                'LM_TOGG': 0x7812,
+                'LM_NEXT': 0x7813,
+                'LM_PREV': 0x7814,
+                'LM_BRIU': 0x7815,
+                'LM_BRID': 0x7816,
+                'LM_SPDU': 0x7817,
+                'LM_SPDD': 0x7818
+            };
+            
+            const keyCode = commandMap[command];
+            if (!keyCode) {
+                showStatus('无效的灯光命令', 3000);
+                return;
+            }
+            
+            try {
+                // 发送灯光控制命令
+                await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, (keyCode >> 8) & 0xFF, keyCode & 0xFF]);
+                showStatus(`已发送灯光命令: ${command}`, 2000);
+            } catch (error) {
+                showStatus(`发送灯光命令失败: ${error.message}`, 3000);
+                console.error('发送灯光命令失败:', error);
+            }
+        }
+        
+        // 发送灯光效果
+        async function sendLightingEffect(effectIndex) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            try {
+                // 发送效果切换命令
+                for (let i = 0; i <= effectIndex; i++) {
+                    await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, 0x78, 0x13]); // LM_NEXT
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+                showStatus(`已切换到灯光效果: ${effectIndex}`, 2000);
+            } catch (error) {
+                showStatus(`切换灯光效果失败: ${error.message}`, 3000);
+                console.error('切换灯光效果失败:', error);
+            }
+        }
+        
+        // 发送RGB效果
+        async function sendRGBEffect(effectIndex) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            const rgbEffects = [
+                0x782B, // RGB_M_P
+                0x782C, // RGB_M_B
+                0x782D, // RGB_M_R
+                0x782E, // RGB_M_SW
+                0x782F, // RGB_M_SN
+                0x7830, // RGB_M_K
+                0x7831, // RGB_M_X
+                0x7832, // RGB_M_G
+                0x7833, // RGB_M_T
+                0x7834  // RGB_M_TW
+            ];
+            
+            if (effectIndex < 0 || effectIndex >= rgbEffects.length) {
+                showStatus('无效的RGB效果索引', 3000);
+                return;
+            }
+            
+            const keyCode = rgbEffects[effectIndex];
+            
+            try {
+                await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, (keyCode >> 8) & 0xFF, keyCode & 0xFF]);
+                showStatus(`已切换到RGB效果: ${effectIndex}`, 2000);
+            } catch (error) {
+                showStatus(`切换RGB效果失败: ${error.message}`, 3000);
+                console.error('切换RGB效果失败:', error);
+            }
+        }
+        
+        // 发送灯光颜色
+        async function sendLightingColor(color) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            // 解析颜色
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            
+            try {
+                // 发送颜色设置命令
+                await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, 0x78, 0x15, r, g, b]);
+                showStatus(`已设置灯光颜色: ${color}`, 2000);
+            } catch (error) {
+                showStatus(`设置灯光颜色失败: ${error.message}`, 3000);
+                console.error('设置灯光颜色失败:', error);
+            }
+        }
+        
+        // 发送RGB颜色
+        async function sendRGBColor(color) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            // 解析颜色
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            
+            try {
+                // 发送RGB颜色设置命令
+                await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, 0x78, 0x45, r, g, b]); // RM_HUEU
+                await new Promise(resolve => setTimeout(resolve, 50));
+                await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, 0x78, 0x47, r, g, b]); // RM_SATU
+                await new Promise(resolve => setTimeout(resolve, 50));
+                await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, 0x78, 0x49, r, g, b]); // RM_VALU
+                showStatus(`已设置RGB颜色: ${color}`, 2000);
+            } catch (error) {
+                showStatus(`设置RGB颜色失败: ${error.message}`, 3000);
+                console.error('设置RGB颜色失败:', error);
+            }
+        }
+        
+        // 保存灯光设置
+        async function saveLightingSettings() {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            try {
+                // 读取当前设置
+                const brightness = parseInt(document.getElementById('brightnessSlider').value);
+                const speed = parseInt(document.getElementById('speedSlider').value);
+                const rgbBrightness = parseInt(document.getElementById('rgbBrightnessSlider').value);
+                const rgbSpeed = parseInt(document.getElementById('rgbSpeedSlider').value);
+                
+                // 发送VIA灯光设置命令
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_BRIGHTNESS, brightness);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_EFFECT_SPEED, speed);
+                
+                showStatus('灯光设置已保存', 2000);
+            } catch (error) {
+                showStatus(`保存灯光设置失败: ${error.message}`, 3000);
+                console.error('保存灯光设置失败:', error);
+            }
+        }
+        
+        // 发送VIA协议命令（用于灯光设置等）
+        async function sendVIACommand(commandId, data) {
+            if (!hidDevice) {
+                throw new Error('设备未连接');
+            }
+            
+            const reportData = new Uint8Array(32); // WebHID使用32字节
+            reportData[0] = commandId; // 第1字节：VIA命令ID
+            
+            // 填充数据
+            if (data && data.length) {
+                data.forEach((val, idx) => {
+                    if (idx + 1 < 32) {
+                        reportData[idx + 1] = val & 0xFF;
+                    }
+                });
+            }
+            
+            await hidDevice.sendReport(0, reportData);
+            console.log(`[DEBUG] Sent VIA command ${commandId} (0x${commandId.toString(16)}) with data:`, data || []);
+        }
+        
+        // 读取VIA协议命令
+        async function readVIACommand(commandId, data = []) {
+            if (!hidDevice) {
+                throw new Error('设备未连接');
+            }
+            
+            const reportData = new Uint8Array(32); // WebHID使用32字节
+            reportData[0] = commandId; // 第1字节：VIA命令ID
+            
+            // 填充数据
+            if (data && data.length) {
+                data.forEach((val, idx) => {
+                    if (idx + 1 < 32) {
+                        reportData[idx + 1] = val & 0xFF;
+                    }
+                });
+            }
+            
+            await hidDevice.sendReport(0, reportData);
+            console.log(`[DEBUG] Sent read VIA command ${commandId} (0x${commandId.toString(16)}) with data:`, data || []);
+            
+            // 等待响应
+            return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('读取超时')), 5000);
+                const onInput = (e) => {
+                    if (e.reportId === 0) {
+                        clearTimeout(timeout);
+                        hidDevice.removeEventListener('inputreport', onInput);
+                        const responseData = new Uint8Array(e.data.buffer);
+                        console.log(`[DEBUG] Read VIA command response:`, Array.from(responseData));
+                        if (responseData[0] === commandId) {
+                            resolve(Array.from(responseData));
+                        }
+                    }
+                };
+                hidDevice.addEventListener('inputreport', onInput);
+            });
+        }
+        
+        // 设置VIA灯光值
+        async function setVIALightingValue(valueId, ...params) {
+            try {
+                // 对于M6-B，使用CUSTOM_MENU_SET_VALUE命令
+                // 格式：[channel, command, ...params]
+                // 通道0通常用于RGB背光
+                await sendVIACommand(VIA_COMMAND.CUSTOM_MENU_SET_VALUE, [0, valueId, ...params]);
+                console.log(`[DEBUG] Set lighting value: ${valueId}, params:`, params);
+                // 添加延迟，确保键盘有足够的时间处理命令
+                await new Promise(resolve => setTimeout(resolve, 50));
+            } catch (error) {
+                console.error('设置灯光值失败:', error);
+                throw error;
+            }
+        }
+        
+        // 保存VIA灯光设置
+        async function saveVIALighting() {
+            try {
+                // 对于M6-B，使用CUSTOM_MENU_SAVE命令
+                // 格式：[channel]
+                // 通道0通常用于RGB背光
+                await sendVIACommand(VIA_COMMAND.CUSTOM_MENU_SAVE, [0]);
+                console.log('[DEBUG] VIA lighting settings saved');
+                // 添加延迟，确保键盘有足够的时间处理保存命令
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (error) {
+                console.error('保存灯光设置失败:', error);
+                throw error;
+            }
+        }
+        
+        // 保存高级灯光设置
+        async function saveAdvancedLightingSettings() {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            try {
+                // 读取Caps Lock和层指示灯设置
+                const capsLockEnabled = document.getElementById('capsLockIndicator').checked;
+                const capsLockColor = document.getElementById('capsLockColor').value;
+                const layer1Enabled = document.getElementById('layer1Indicator').checked;
+                const layer1Color = document.getElementById('layer1Color').value;
+                const layer2Enabled = document.getElementById('layer2Indicator').checked;
+                const layer2Color = document.getElementById('layer2Color').value;
+                const layer3Enabled = document.getElementById('layer3Indicator').checked;
+                const layer3Color = document.getElementById('layer3Color').value;
+                
+                // 解析颜色
+                function parseColor(color) {
+                    const r = parseInt(color.slice(1, 3), 16);
+                    const g = parseInt(color.slice(3, 5), 16);
+                    const b = parseInt(color.slice(5, 7), 16);
+                    // 转换为HSL的Hue和Saturation
+                    const max = Math.max(r, g, b);
+                    const min = Math.min(r, g, b);
+                    let h = 0, s = 0;
+                    
+                    if (max !== min) {
+                        const d = max - min;
+                        s = d / max;
+                        switch (max) {
+                            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                            case g: h = ((b - r) / d + 2) / 6; break;
+                            case b: h = ((r - g) / d + 4) / 6; break;
+                        }
+                    }
+                    
+                    return {
+                        hue: Math.round(h * 255),
+                        sat: Math.round(s * 255)
+                    };
+                }
+                
+                // 设置Caps Lock指示灯
+                const capsColor = parseColor(capsLockColor);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_CAPS_LOCK_INDICATOR_COLOR, capsColor.hue, capsColor.sat);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_CAPS_LOCK_INDICATOR_ROW_COL, capsLockEnabled ? 254 : 255, 254);
+                
+                // 设置层1指示灯
+                const layer1Col = parseColor(layer1Color);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_LAYER_1_INDICATOR_COLOR, layer1Col.hue, layer1Col.sat);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_LAYER_1_INDICATOR_ROW_COL, layer1Enabled ? 254 : 255, 254);
+                
+                // 设置层2指示灯
+                const layer2Col = parseColor(layer2Color);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_LAYER_2_INDICATOR_COLOR, layer2Col.hue, layer2Col.sat);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_LAYER_2_INDICATOR_ROW_COL, layer2Enabled ? 254 : 255, 254);
+                
+                // 设置层3指示灯
+                const layer3Col = parseColor(layer3Color);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_LAYER_3_INDICATOR_COLOR, layer3Col.hue, layer3Col.sat);
+                await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_LAYER_3_INDICATOR_ROW_COL, layer3Enabled ? 254 : 255, 254);
+                
+                // 保存设置到EEPROM
+                await saveVIALighting();
+                
+                showStatus('高级灯光设置已保存', 2000);
+            } catch (error) {
+                showStatus(`保存高级灯光设置失败: ${error.message}`, 3000);
+                console.error('保存高级灯光设置失败:', error);
+            }
+        }
+        
+        function init() {
+            checkWebHIDSupport();
+            connectBtn.addEventListener('click', connectDevice);
+            bindKeySelection();
+            bindTabSwitch();
+            bindLayerSwitch();
+            bindLightingCategorySwitch();
+            bindThemeSwitch();
+            bindDragHandle();
+            bindLayerScrollbar();
+            
+            // 初始化设备选择器
+            initDeviceSelector();
+            
+            // 绑定备份按钮
+            document.getElementById('backupBtn').addEventListener('click', backupHTML);
+            
+            // 绑定EEPROM查看器按钮
+            document.getElementById('eepromToggleBtn').addEventListener('click', function() {
+                document.getElementById('eepromModal').style.display = 'block';
+                // 自动读取EEPROM内容
+                const selectedLayer = parseInt(document.getElementById('eepromLayerSelect').value);
+                readEEPROM(selectedLayer);
+            });
+            
+            // 绑定层选择器事件
+            document.getElementById('eepromLayerSelect').addEventListener('change', function() {
+                const selectedLayer = parseInt(this.value);
+                readEEPROM(selectedLayer);
+            });
+            
+            // 绑定关闭按钮
+            document.getElementById('closeEepromModal').addEventListener('click', function() {
+                document.getElementById('eepromModal').style.display = 'none';
+            });
+            
+            document.getElementById('closeEepromBtn').addEventListener('click', function() {
+                document.getElementById('eepromModal').style.display = 'none';
+            });
+            
+            // 点击模态框外部关闭
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('eepromModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // 绑定保存为JSON按钮
+            document.getElementById('saveEepromJsonBtn').addEventListener('click', saveEEPROMAsJSON);
+            
+            // 从localStorage恢复主题
+            const savedTheme = localStorage.getItem('m6b-theme');
+            if (savedTheme) {
+                document.body.dataset.theme = savedTheme;
+                document.querySelectorAll('.theme-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.theme === savedTheme);
+                });
+            }
+            
+            // 初始化宏系统
+            loadMacros();
+            loadMacroContent();
+        }
+
+        // 发送灯光命令的辅助函数
+        function sendLightCommand(keyCode) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 2000);
+                return;
+            }
+            if (selectedKeyIndex === null) {
+                showStatus('请先选择键盘上的一个按键', 2000);
+                return;
+            }
+            const keycodeLow = keyCode & 0xFF;
+            const keycodeHigh = (keyCode >> 8) & 0xFF;
+            const bytes = new Uint8Array([0x00, currentDevice.vid & 0xFF, (currentDevice.vid >> 8) & 0xFF, currentDevice.pid & 0xFF, (currentDevice.pid >> 8) & 0xFF, 0x01, 0x00, VIA_COMMAND.SET_KEYCODE, CURRENT_LAYER, selectedKeyIndex, keycodeLow, keycodeHigh]);
+            hidDevice.sendReport(0, bytes).then(() => {
+                m6bKeys[selectedKeyIndex].textContent = getKeyName(keyCode);
+                showStatus(`已发送灯光命令: ${getKeyName(keyCode)}`, 1000);
+            }).catch(err => {
+                showStatus(`发送失败: ${err.message}`, 2000);
+            });
+        }
+        
+        // 读取EEPROM内容
+        async function readEEPROM(layer = 0) {
+            if (!hidDevice) {
+                showStatus('请先连接设备', 3000);
+                return;
+            }
+            
+            try {
+                showStatus(`正在读取第${layer}层EEPROM...`, 2000);
+                
+                // 读取EEPROM内容（使用VIA协议的GET_KEYBOARD_VALUE命令）
+                const eepromData = [];
+                
+                // 读取键值数据（6个键位，每个键位2字节）
+                for (let i = 0; i < 6; i++) {
+                    const keyCode = await readKey(i, layer);
+                    eepromData.push(keyCode & 0xFF); // 低8位 (与keycodes.h一致)
+                    eepromData.push((keyCode >> 8) & 0xFF); // 高8位 (与keycodes.h一致)
+                }
+                
+                // 填充剩余数据
+                for (let i = 12; i < 64; i++) {
+                    eepromData.push(0);
+                }
+                
+                // 显示EEPROM内容
+                displayEEPROM(eepromData, layer);
+                showStatus(`第${layer}层EEPROM读取完成`, 2000);
+            } catch (error) {
+                showStatus(`读取EEPROM失败: ${error.message}`, 3000);
+                console.error('读取EEPROM失败:', error);
+            }
+        }
+        
+        // 显示EEPROM内容
+        function displayEEPROM(data, layer = 0) {
+            const eepromGrid = document.getElementById('eepromGrid');
+            eepromGrid.innerHTML = '';
+            
+            // 添加层信息标题
+            const layerTitle = document.createElement('div');
+            layerTitle.className = 'eeprom-layer-title';
+            layerTitle.textContent = `第${layer}层键值数据`;
+            eepromGrid.appendChild(layerTitle);
+            
+            for (let i = 0; i < data.length; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'eeprom-cell' + (data[i] !== 0 ? ' has-data' : '');
+                
+                // 创建值显示元素
+                const valueElement = document.createElement('div');
+                valueElement.className = 'eeprom-value';
+                valueElement.textContent = `0x${data[i].toString(16).padStart(4, '0')}`; // 显示为4位十六进制
+                
+                // 创建地址显示元素
+                const addressElement = document.createElement('div');
+                addressElement.className = 'eeprom-address';
+                addressElement.textContent = `0x${i.toString(16).padStart(4, '0')}`; // 显示为4位十六进制
+                
+                // 将元素添加到单元格
+                cell.appendChild(valueElement);
+                cell.appendChild(addressElement);
+                cell.title = `地址: 0x${i.toString(16).padStart(4, '0')}, 值: 0x${data[i].toString(16).padStart(4, '0')}`; // 显示为4位十六进制
+                eepromGrid.appendChild(cell);
+            }
+        }
+        
+        // 保存EEPROM到文件
+        function saveEEPROMToFile() {
+            const eepromGrid = document.getElementById('eepromGrid');
+            const cells = eepromGrid.querySelectorAll('.eeprom-cell');
+            
+            if (cells.length === 0) {
+                showStatus('请先读取EEPROM', 3000);
+                return;
+            }
+            
+            const eepromData = [];
+            cells.forEach((cell, index) => {
+                const value = parseInt(cell.textContent.split('\n')[0].replace('0x', ''), 16);
+                eepromData.push(value);
+            });
+            
+            // 创建数据字符串
+            let dataString = 'EEPROM内容:\n';
+            for (let i = 0; i < eepromData.length; i += 8) {
+                const row = eepromData.slice(i, i + 8);
+                const rowHex = row.map(val => val.toString(16).padStart(2, '0')).join(' ');
+                dataString += `0x${i.toString(16).padStart(2, '0')}: ${rowHex}\n`;
+            }
+            
+            // 添加键值分析
+            dataString += '\n键值分析（与keycodes.h一致）:\n';
+            for (let i = 0; i < 6; i++) {
+                const keyCode = (eepromData[i * 2 + 1] << 8) | eepromData[i * 2]; // 低8位在前，高8位在后
+                dataString += `键位 ${i}: 0x${keyCode.toString(16).padStart(4, '0')}\n`;
+                // 移除对不存在的getKeyName函数的调用
+            }
+            
+            // 创建下载链接
+            const blob = new Blob([dataString], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `eeprom_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showStatus('EEPROM已保存到文件', 2000);
+        }
+        
+        // 保存EEPROM为JSON
+        function saveEEPROMAsJSON() {
+            const eepromGrid = document.getElementById('eepromGrid');
+            const cells = eepromGrid.querySelectorAll('.eeprom-cell');
+            
+            if (cells.length === 0) {
+                showStatus('请先读取EEPROM', 3000);
+                return;
+            }
+            
+            const eepromData = [];
+            const displayData = [];
+            cells.forEach((cell, index) => {
+                const value = parseInt(cell.textContent.split('\n')[0].replace('0x', ''), 16);
+                eepromData.push(value);
+                
+                // 生成与显示界面一致的格式
+                displayData.push({
+                    address: `0x${index.toString(16).padStart(4, '0')}`,
+                    value: `0x${value.toString(16).padStart(4, '0')}`,
+                    raw: value
+                });
+            });
+            
+            // 分析键值数据
+            const keyData = [];
+            for (let i = 0; i < 6; i++) {
+                const keyCode = (eepromData[i * 2 + 1] << 8) | eepromData[i * 2]; // 低8位在前，高8位在后
+                keyData.push({
+                    position: i,
+                    keycode: keyCode,
+                    hex: `0x${keyCode.toString(16).padStart(4, '0')}`
+                });
+            }
+            
+            // 创建JSON数据
+            const jsonData = {
+                timestamp: new Date().toISOString(),
+                device: currentDevice ? currentDevice.name : 'Unknown',
+                eeprom: {
+                    raw: eepromData,
+                    display: displayData, // 与显示界面一致的格式
+                    keys: keyData
+                }
+            };
+            
+            // 创建下载链接
+            const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `eeprom_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showStatus('EEPROM已保存为JSON', 2000);
+        }
+        
+        // 绑定EEPROM按钮事件
+        document.getElementById('readEepromBtn').addEventListener('click', readEEPROM);
+        document.getElementById('saveEepromBtn').addEventListener('click', saveEEPROMToFile);
+        document.getElementById('saveEepromJsonBtn').addEventListener('click', saveEEPROMAsJSON);
+
+        const KEYCODE_MAP = [
+            ["00","Reserved (no event indicated)"],["01","Keyboard ErrorRollOver"],["02","Keyboard POSTFail"],["03","Keyboard ErrorUndefined"],["04","Keyboard a and A"],["05","Keyboard b and B"],["06","Keyboard c and C"],["07","Keyboard d and D"],["08","Keyboard e and E"],["09","Keyboard f and F"],["0A","Keyboard g and G"],["0B","Keyboard h and H"],["0C","Keyboard i and I"],["0D","Keyboard j and J"],["0E","Keyboard k and K"],["0F","Keyboard l and L"],["10","Keyboard m and M"],["11","Keyboard n and N"],["12","Keyboard o and O"],["13","Keyboard p and P"],["14","Keyboard q and Q"],["15","Keyboard r and R"],["16","Keyboard s and S"],["17","Keyboard t and T"],["18","Keyboard u and U"],["19","Keyboard v and V"],["1A","Keyboard w and W"],["1B","Keyboard x and X"],["1C","Keyboard y and Y"],["1D","Keyboard z and Z"],["1E","Keyboard 1 and !"],["1F","Keyboard 2 and @"],["20","Keyboard 3 and #"],["21","Keyboard 4 and $"],["22","Keyboard 5 and %"],["23","Keyboard 6 and ^"],["24","Keyboard 7 and &"],["25","Keyboard 8 and *"],["26","Keyboard 9 and ("],["27","Keyboard 0 and )"],["28","Keyboard Return (ENTER)"],["29","Keyboard ESCAPE"],["2A","Keyboard DELETE (Backspace)"],["2B","Keyboard Tab"],["2C","Keyboard Spacebar"],["2D","Keyboard - and (underscore)"],["2E","Keyboard = and +"],["2F","Keyboard [ and {"],["30","Keyboard ] and }"],["31","Keyboard \\ and |"],["32","Keyboard Non-US # and ~"],["33","Keyboard ; and :"],["34","Keyboard ' and \""],["35","Keyboard Grave Accent and Tilde"],["36","Keyboard , and <"],["37","Keyboard . and >"],["38","Keyboard / and ?"],["39","Keyboard Caps Lock"],["3A","Keyboard F1"],["3B","Keyboard F2"],["3C","Keyboard F3"],["3D","Keyboard F4"],["3E","Keyboard F5"],["3F","Keyboard F6"],["40","Keyboard F7"],["41","Keyboard F8"],["42","Keyboard F9"],["43","Keyboard F10"],["44","Keyboard F11"],["45","Keyboard F12"],["46","Keyboard PrintScreen"],["47","Keyboard Scroll Lock"],["48","Keyboard Pause"],["49","Keyboard Insert"],["4A","Keyboard Home"],["4B","Keyboard PageUp"],["4C","Keyboard Delete Forward"],["4D","Keyboard End"],["4E","Keyboard PageDown"],["4F","Keyboard RightArrow"],["50","Keyboard LeftArrow"],["51","Keyboard DownArrow"],["52","Keyboard UpArrow"],["53","Keypad Num Lock and Clear"],["54","Keypad /"],["55","Keypad *"],["56","Keypad -"],["57","Keypad +"],["58","Keypad ENTER"],["59","Keypad 1 and End"],["5A","Keypad 2 and Down Arrow"],["5B","Keypad 3 and PageDn"],["5C","Keypad 4 and Left Arrow"],["5D","Keypad 5"],["5E","Keypad 6 and Right Arrow"],["5F","Keypad 7 and Home"],["60","Keypad 8 and Up Arrow"],["61","Keypad 9 and PageUp"],["62","Keypad 0 and Insert"],["66","Keyboard Power"],["67","Keypad ="],["68","Keyboard F13"],["69","Keyboard F14"],["6A","Keyboard F15"],["6B","Keyboard F16"],["6C","Keyboard F17"],["6D","Keyboard F18"],["6E","Keyboard F19"],["6F","Keyboard F20"],["70","Keyboard F21"],["71","Keyboard F22"],["72","Keyboard F23"],["73","Keyboard F24"],["74","Keyboard Execute"],["75","Keyboard Help"],["76","Keyboard Menu"],["77","Keyboard Select"],["78","Keyboard Stop"],["79","Keyboard Again"],["7A","Keyboard Undo"],["7B","Keyboard Cut"],["7C","Keyboard Copy"],["7D","Keyboard Paste"],["7E","Keyboard Find"],["7F","Keyboard Mute"],["80","Keyboard Volume Up"],["81","Keyboard Volume Down"],["82","Keyboard Locking Caps Lock"],["83","Keyboard Locking Num Lock"],["84","Keyboard Locking Scroll Lock"],["85","Keypad Comma"],["86","Keypad Equal Sign"],["E0","Keyboard LeftControl"],["E1","Keyboard LeftShift"],["E2","Keyboard LeftAlt"],["E3","Keyboard Left GUI"],["E4","Keyboard RightControl"],["E5","Keyboard RightShift"],["E6","Keyboard RightAlt"],["E7","Keyboard Right GUI"]
+        ];
+
+        function populateKeycodeTable() {
+            const tbody = document.getElementById('keycodeTableBody');
+            tbody.innerHTML = '';
+            KEYCODE_MAP.forEach(function(item) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td>0x' + item[0] + '</td><td>' + item[1] + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        document.getElementById('keycodeListBtn').addEventListener('click', function() {
+            populateKeycodeTable();
+            document.getElementById('keycodeModal').style.display = 'block';
+        });
+
+        document.getElementById('closeKeycodeModal').addEventListener('click', function() {
+            document.getElementById('keycodeModal').style.display = 'none';
+        });
+
+        document.getElementById('keycodeModal').addEventListener('click', function(e) {
+            if (e.target === document.getElementById('keycodeModal')) {
+                document.getElementById('keycodeModal').style.display = 'none';
+            }
+        });
+
+        function loadMacros() {
+            try {
+                const saved = localStorage.getItem('keyboardMacros');
+                if (saved) {
+                    macros = JSON.parse(saved);
+                    // 确保数组长度正确
+                    while (macros.length < MACRO_COUNT) {
+                        macros.push('');
+                    }
+                } else {
+                    macros = new Array(MACRO_COUNT).fill('');
+                }
+            } catch (e) {
+                console.error('加载宏数据失败:', e);
+                macros = new Array(MACRO_COUNT).fill('');
+            }
+        }
+
+        function saveMacros() {
+            try {
+                localStorage.setItem('keyboardMacros', JSON.stringify(macros));
+                showStatus('宏已保存到本地', 2000);
+            } catch (e) {
+                console.error('保存宏数据失败:', e);
+                showStatus('保存失败', 2000);
+            }
+        }
+
+        function loadCurrentMacro() {
+            const textarea = document.getElementById('macroTextArea');
+            if (textarea) {
+                textarea.value = macros[currentMacroIndex] || '';
+                updateCharCount();
+            }
+        }
+
+        function updateCharCount() {
+            const textarea = document.getElementById('macroTextArea');
+            const counter = document.getElementById('macroCharCount');
+            if (textarea && counter) {
+                counter.textContent = '字符数: ' + textarea.value.length;
+            }
+        }
+
+        loadMacros();
+
+        document.querySelectorAll('.macro-tab-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                saveCurrentMacro();
+                document.querySelector('.macro-tab-btn.active').classList.remove('active');
+                this.classList.add('active');
+                currentMacroIndex = parseInt(this.dataset.macroIndex);
+                loadCurrentMacro();
+            });
+        });
+
+        // 获取宏缓冲区大小
+        async function getMacroBufferSize() {
+            if (!hidDevice) return 0;
+            
+            try {
+                console.log('[MACRO] Getting macro buffer size...');
+                await sendVIAReport(VIA_COMMAND.MACRO_GET_BUFFER_SIZE, []);
+                await delay(100);
+                // 响应会在inputreport事件中处理
+                return null;
+            } catch (e) {
+                console.error('获取宏缓冲区大小失败:', e);
+                return 0;
+            }
+        }
+        
+        // 读取宏缓冲区内容
+        async function readMacroBuffer() {
+            if (!hidDevice) return null;
+            
+            try {
+                console.log('[MACRO] Reading macro buffer...');
+                // 发送MACRO_GET_BUFFER命令，offset=0
+                const commandData = [
+                    VIA_COMMAND.MACRO_GET_BUFFER,
+                    0x00, // offset high
+                    0x00  // offset low
+                ];
+                while (commandData.length < 32) {
+                    commandData.push(0x00);
+                }
+                await sendVIAReportRaw(commandData);
+                await delay(100);
+                // 响应会在inputreport事件中处理
+                return null;
+            } catch (e) {
+                console.error('读取宏缓冲区失败:', e);
+                return null;
+            }
+        }
+
+        // VIA官方宏写入流程
+        async function writeMacrosToKeyboard() {
+            if (!hidDevice) {
+                showStatus('请先连接键盘', 2000);
+                return;
+            }
+
+            try {
+                showStatus('正在写入宏到键盘...', 5000);
+                
+                // 1. 获取宏缓冲区大小（按照VIA官方流程）
+                console.log('[MACRO] === STARTING MACRO WRITE ===');
+                console.log('[MACRO] Getting macro count...');
+                let macroBufferSize = 512; // 默认值
+                try {
+                    // 先获取宏数量
+                    await sendVIAReport(VIA_COMMAND.MACRO_GET_COUNT, []);
+                    await delay(100);
+                    // 获取宏缓冲区大小
+                    await sendVIAReport(VIA_COMMAND.MACRO_GET_BUFFER_SIZE, []);
+                    await delay(100);
+                } catch (e) {
+                    console.log('[MACRO] Using default buffer size:', macroBufferSize);
+                }
+                console.log('[MACRO] Macro buffer size:', macroBufferSize);
+                
+                // 2. 构建宏缓冲区：所有宏用0x00分隔（VIA官方格式）
+                const fullBuffer = [];
+                console.log(`[MACRO] Current macros array (length=${macros.length}):`, macros);
+                for (let i = 0; i < MACRO_COUNT; i++) {
+                    const content = macros[i] || '';
+                    console.log(`[MACRO] Macro ${i}: "${content}" (length=${content.length})`);
+                    
+                    // VIA格式：对于纯文本，直接写入每个字符的ASCII码
+                    for (let j = 0; j < content.length; j++) {
+                        const charCode = content.charCodeAt(j);
+                        fullBuffer.push(charCode); // 直接写入ASCII码
+                    }
+                    
+                    // 每个宏用0x00分隔（MacroTerminator）
+                    if (i < MACRO_COUNT - 1) {
+                        fullBuffer.push(0x00);
+                    }
+                }
+                // 最后加一个0x00结束标记
+                fullBuffer.push(0x00);
+                
+                // 填充到宏缓冲区大小
+                while (fullBuffer.length < macroBufferSize) {
+                    fullBuffer.push(0x00);
+                }
+                
+                console.log(`[MACRO] Full buffer size: ${fullBuffer.length} bytes`);
+                console.log(`[MACRO] Buffer content (hex):`, fullBuffer.slice(0, Math.min(32, fullBuffer.length)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+                
+                // 3. 重置宏缓冲区
+                console.log('[MACRO] Resetting macro buffer...');
+                await sendVIAReport(VIA_COMMAND.MACRO_RESET, []);
+                await delay(100);
+                
+                const lastOffset = macroBufferSize - 1;
+                
+                try {
+                    // 4. 设置最后一个字节为0xFF，表示写入进行中
+                    console.log('[MACRO] Marking write-in-progress...');
+                    let commandData = [
+                        VIA_COMMAND.MACRO_SET_BUFFER,
+                        (lastOffset >> 8) & 0xFF,
+                        lastOffset & 0xFF,
+                        1,
+                        0xFF
+                    ];
+                    while (commandData.length < 32) {
+                        commandData.push(0x00);
+                    }
+                    await sendVIAReportRaw(commandData);
+                    await delay(50);
+                    
+                    // 5. 分块写入数据（每块28字节）
+                    const bufferSize = 28;
+                    for (let offset = 0; offset < fullBuffer.length; offset += bufferSize) {
+                        const buffer = fullBuffer.slice(offset, offset + bufferSize);
+                        console.log(`[MACRO] Writing chunk: offset=${offset}, size=${buffer.length}`);
+                        
+                        commandData = [
+                            VIA_COMMAND.MACRO_SET_BUFFER,
+                            (offset >> 8) & 0xFF,
+                            offset & 0xFF,
+                            buffer.length,
+                            ...buffer
+                        ];
+                        while (commandData.length < 32) {
+                            commandData.push(0x00);
+                        }
+                        await sendVIAReportRaw(commandData);
+                        await delay(50);
+                    }
+                } finally {
+                    // 6. 设置最后一个字节为0x00，表示写入完成
+                    console.log('[MACRO] Marking write complete...');
+                    let commandData = [
+                        VIA_COMMAND.MACRO_SET_BUFFER,
+                        (lastOffset >> 8) & 0xFF,
+                        lastOffset & 0xFF,
+                        1,
+                        0x00
+                    ];
+                    while (commandData.length < 32) {
+                        commandData.push(0x00);
+                    }
+                    await sendVIAReportRaw(commandData);
+                    await delay(50);
+                }
+                
+                // 7. 不发送EEPROM_SAVE（VIA不发送，宏写入RAM后立即生效）
+                // EEPROM_SAVE会触发重新加载，需要拔插
+                console.log('[MACRO] Skipping EEPROM_SAVE (VIA does not send this)');
+                
+                showStatus('宏已成功写入键盘！立即生效！', 3000);
+                console.log('[MACRO] === MACRO WRITE COMPLETE ===');
+                console.log('[MACRO] Macros are now active immediately!');
+                
+            } catch (e) {
+                console.error('写入宏失败:', e);
+                showStatus('写入失败: ' + e.message, 3000);
+            }
+        }
+
+        function simulateMacroText(macroIndex) {
+            const text = macros[macroIndex];
+            if (!text) return;
+
+            const activeElement = document.activeElement;
+            const isInputField = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.isContentEditable);
+
+            if (isInputField) {
+                const start = activeElement.selectionStart;
+                const end = activeElement.selectionEnd;
+                const before = activeElement.value.substring(0, start);
+                const after = activeElement.value.substring(end);
+                activeElement.value = before + text + after;
+                activeElement.selectionStart = activeElement.selectionEnd = start + text.length;
+                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                const targetInput = document.createElement('input');
+                targetInput.style.position = 'fixed';
+                targetInput.style.left = '-9999px';
+                targetInput.style.top = '0';
+                targetInput.id = 'macroInputHelper';
+                document.body.appendChild(targetInput);
+                targetInput.focus();
+
+                setTimeout(() => {
+                    const charArray = text.split('');
+                    let index = 0;
+
+                    function typeNext() {
+                        if (index < charArray.length) {
+                            const char = charArray[index];
+                            const code = char.charCodeAt(0);
+
+                            const pressEvent = new KeyboardEvent('keydown', {
+                                key: char,
+                                code: 'Unidentified',
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            const inputEvent = new InputEvent('input', {
+                                data: char,
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            const pressEvent2 = new KeyboardEvent('keypress', {
+                                key: char,
+                                charCode: code,
+                                code: 'Unidentified',
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            const upEvent = new KeyboardEvent('keyup', {
+                                key: char,
+                                code: 'Unidentified',
+                                bubbles: true,
+                                cancelable: true
+                            });
+
+                            targetInput.dispatchEvent(pressEvent);
+                            targetInput.dispatchEvent(inputEvent);
+                            targetInput.dispatchEvent(pressEvent2);
+                            targetInput.dispatchEvent(upEvent);
+
+                            targetInput.value += char;
+                            index++;
+                            setTimeout(typeNext, 30);
+                        } else {
+                            const finalText = targetInput.value;
+                            document.body.removeChild(targetInput);
+
+                            navigator.clipboard.writeText(finalText).then(() => {
+                                showStatus('宏文本已复制到剪贴板，请粘贴到目标位置', 3000);
+                            }).catch(() => {
+                                showStatus('宏内容: ' + finalText, 5000);
+                            });
+                        }
+                    }
+
+                    typeNext();
+                }, 100);
+            }
+        }
+
+        function isMacroKey(keyCode) {
+            return keyCode >= 24320 && keyCode <= 24335;
+        }
+
+        function getMacroIndex(keyCode) {
+            return keyCode - 24320;
+        }
+
+        function charToQMKCode(charCode) {
+            const map = {
+                'a': 0x0004, 'b': 0x0005, 'c': 0x0006, 'd': 0x0007, 'e': 0x0008,
+                'f': 0x0009, 'g': 0x000A, 'h': 0x000B, 'i': 0x000C, 'j': 0x000D,
+                'k': 0x000E, 'l': 0x000F, 'm': 0x0010, 'n': 0x0011, 'o': 0x0012,
+                'p': 0x0013, 'q': 0x0014, 'r': 0x0015, 's': 0x0016, 't': 0x0017,
+                'u': 0x0018, 'v': 0x0019, 'w': 0x001A, 'x': 0x001B, 'y': 0x001C,
+                'z': 0x001D, 'A': 0x0004, 'B': 0x0005, 'C': 0x0006, 'D': 0x0007,
+                'E': 0x0008, 'F': 0x0009, 'G': 0x000A, 'H': 0x000B, 'I': 0x000C,
+                'J': 0x000D, 'K': 0x000E, 'L': 0x000F, 'M': 0x0010, 'N': 0x0011,
+                'O': 0x0012, 'P': 0x0013, 'Q': 0x0014, 'R': 0x0015, 'S': 0x0016,
+                'T': 0x0017, 'U': 0x0018, 'V': 0x0019, 'W': 0x001A, 'X': 0x001B,
+                'Y': 0x001C, 'Z': 0x001D, '0': 0x0027, '1': 0x001E, '2': 0x001F,
+                '3': 0x0020, '4': 0x0021, '5': 0x0022, '6': 0x0023, '7': 0x0024,
+                '8': 0x0025, '9': 0x0026, ' ': 0x002C, '\n': 0x0028, '\r': 0x0028,
+                '!': 0x001E, '@': 0x001F, '#': 0x0020, '$': 0x0021, '%': 0x0022,
+                '^': 0x0023, '&': 0x0024, '*': 0x0025, '(': 0x0026, ')': 0x0027,
+                '-': 0x002D, '_': 0x002D, '=': 0x002E, '+': 0x002E, '[': 0x002F,
+                '{': 0x002F, ']': 0x0030, '}': 0x0030, '\\': 0x0031, '|': 0x0031,
+                ';': 0x0033, ':': 0x0033, '\'': 0x0034, '"': 0x0034, '`': 0x0035,
+                '~': 0x0035, ',': 0x0036, '<': 0x0036, '.': 0x0037, '>': 0x0037,
+                '/': 0x0038, '?': 0x0038,
+            };
+            const char = String.fromCharCode(charCode);
+            return map[char] !== undefined ? map[char] : null;
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // 灯光预览更新函数
+        function updateLightingPreview() {
+            const color = document.getElementById('colorPicker').value;
+            const brightness = parseInt(document.getElementById('brightnessSlider').value) / 255;
+            
+            // 计算透明度基于亮度
+            const alpha = 0.3 + (brightness * 0.7);
+            
+            // 更新所有预览按键的颜色
+            for (let i = 0; i < 6; i++) {
+                const previewKey = document.getElementById(`previewKey${i}`);
+                if (previewKey) {
+                    previewKey.style.background = `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;
+                    previewKey.style.borderColor = color;
+                }
+            }
+        }
+
+        // 初始化灯光预览
+        function initLightingPreview() {
+            const color = document.getElementById('colorPicker').value;
+            const brightness = parseInt(document.getElementById('brightnessSlider').value) / 255;
+            const alpha = 0.3 + (brightness * 0.7);
+            
+            for (let i = 0; i < 6; i++) {
+                const previewKey = document.getElementById(`previewKey${i}`);
+                if (previewKey) {
+                    previewKey.style.background = `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`;
+                    previewKey.style.borderColor = color;
+                }
+            }
+        }
+
+        // 绑定换层键点击事件
+        function bindLayerKeyEvents() {
+            const layerKeys = document.querySelectorAll('.layer-key');
+            layerKeys.forEach(option => {
+                option.addEventListener('click', () => {
+                    if (selectedKeyIndex === null) {
+                        showStatus('请先选中键盘上的按键', 2000);
+                        return;
+                    }
+                    const keyCode = parseInt(option.dataset.keyCode);
+                    writeKey(selectedKeyIndex, keyCode);
+                    m6bKeys[selectedKeyIndex].classList.remove('selected');
+                    selectedKeyIndex = null;
+                });
+            });
+        }
+
+        // 绑定灯光控制按钮点击事件
+        function bindLightingKeyEvents() {
+            const lightingOptions = document.querySelectorAll('.lighting-key-option');
+            lightingOptions.forEach(option => {
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const keyCode = parseInt(option.dataset.keyCode);
+                    const keycodeH = (keyCode >> 8) & 0xFF;
+                    const keycodeL = keyCode & 0xFF;
+                    sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, keycodeH, keycodeL]);
+                    showStatus(`已发送灯光控制命令: ${option.textContent}`, 2000);
+                });
+            });
+        }
+
+        // 测试宏按钮
+        const testMacroBtn = document.getElementById('testMacroBtn');
+        if (testMacroBtn) {
+            testMacroBtn.addEventListener('click', testCurrentMacro);
+        }
+
+        // 初始化灯光预览
+        initLightingPreview();
+        
+        // 绑定换层键事件
+        bindLayerKeyEvents();
+        
+        // 绑定灯光控制按钮事件
+        bindLightingKeyEvents();
+
+        init();
+
+        loadMacroContent();
+    </script>
+</body>
+</html>
