@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M6-B 改键工具 (Win/F1-F12修复版)</title>
+    <title>M6-B 改键工具</title>
     <style>
         * {
             margin: 0;
@@ -2105,6 +2105,7 @@
 
         // 全局变量
         let hidDevice = null;
+        let keyboardInputDevice = null; // 用于键盘输入的第二个HID设备
         let selectedKeyIndex = null;
         let CURRENT_LAYER = 0; // 改为可变量
         let heartbeatTimer = null; // 心跳定时器
@@ -2366,7 +2367,7 @@
                 showStatus(`已连接 ${currentDevice.name}`, 3000);
 
                 // 尝试同时打开另一个设备用于键盘输入监听
-                let keyboardInputDevice = null;
+                keyboardInputDevice = null;
                 if (devices.length > 1) {
                     const otherDevice = devices[1 - selectedDeviceIndex]; // 选择另一个设备
                     console.log('[DEBUG] Opening secondary device for keyboard input:', otherDevice);
@@ -3439,46 +3440,90 @@
                 console.log(`[DEBUG] Selected device: ${currentDevice.name}, KEY_COUNT: ${KEY_COUNT}`);
                 showStatus(`已选择 ${currentDevice.name}`, 2000);
             });
+        }
+
+        // 绑定灯光控制按钮事件
+        function bindLightingControls() {
+            console.log('[DEBUG] Binding lighting controls...');
             
             // 灯光控制事件
-            document.getElementById('brightnessSlider').addEventListener('input', function() {
-                document.getElementById('brightnessValue').textContent = this.value;
-                updateLightingPreview();
-            });
+            const brightnessSlider = document.getElementById('brightnessSlider');
+            if (brightnessSlider) {
+                brightnessSlider.addEventListener('input', function() {
+                    document.getElementById('brightnessValue').textContent = this.value;
+                    updateLightingPreview();
+                });
+            }
             
-            document.getElementById('speedSlider').addEventListener('input', function() {
-                document.getElementById('speedValue').textContent = this.value;
-            });
+            const speedSlider = document.getElementById('speedSlider');
+            if (speedSlider) {
+                speedSlider.addEventListener('input', function() {
+                    document.getElementById('speedValue').textContent = this.value;
+                });
+            }
             
-            document.getElementById('rgbBrightnessSlider').addEventListener('input', function() {
-                document.getElementById('rgbBrightnessValue').textContent = this.value;
-                updateLightingPreview();
-            });
+            const rgbBrightnessSlider = document.getElementById('rgbBrightnessSlider');
+            if (rgbBrightnessSlider) {
+                rgbBrightnessSlider.addEventListener('input', function() {
+                    document.getElementById('rgbBrightnessValue').textContent = this.value;
+                    updateLightingPreview();
+                });
+            }
             
-            document.getElementById('rgbSpeedSlider').addEventListener('input', function() {
-                document.getElementById('rgbSpeedValue').textContent = this.value;
-            });
+            const rgbSpeedSlider = document.getElementById('rgbSpeedSlider');
+            if (rgbSpeedSlider) {
+                rgbSpeedSlider.addEventListener('input', function() {
+                    document.getElementById('rgbSpeedValue').textContent = this.value;
+                });
+            }
             
-            document.getElementById('colorPicker').addEventListener('change', function() {
-                updateLightingPreview();
-            });
+            const colorPicker = document.getElementById('colorPicker');
+            if (colorPicker) {
+                colorPicker.addEventListener('change', function() {
+                    updateLightingPreview();
+                });
+            }
             
-            document.getElementById('rgbColorPicker').addEventListener('change', function() {
-                updateLightingPreview();
-            });
+            const rgbColorPicker = document.getElementById('rgbColorPicker');
+            if (rgbColorPicker) {
+                rgbColorPicker.addEventListener('change', function() {
+                    updateLightingPreview();
+                });
+            }
             
             // 灯光控制按钮
-            document.getElementById('lightOnBtn').addEventListener('click', function() {
-                sendLightingCommand('LM_ON');
-            });
+            const lightOnBtn = document.getElementById('lightOnBtn');
+            if (lightOnBtn) {
+                lightOnBtn.addEventListener('click', function() {
+                    console.log('[DEBUG] Light On button clicked');
+                    sendLightingCommand('LM_ON');
+                });
+                console.log('[DEBUG] Light On button bound');
+            } else {
+                console.error('[ERROR] Light On button not found!');
+            }
             
-            document.getElementById('lightOffBtn').addEventListener('click', function() {
-                sendLightingCommand('LM_OFF');
-            });
+            const lightOffBtn = document.getElementById('lightOffBtn');
+            if (lightOffBtn) {
+                lightOffBtn.addEventListener('click', function() {
+                    console.log('[DEBUG] Light Off button clicked');
+                    sendLightingCommand('LM_OFF');
+                });
+                console.log('[DEBUG] Light Off button bound');
+            } else {
+                console.error('[ERROR] Light Off button not found!');
+            }
             
-            document.getElementById('saveLightingBtn').addEventListener('click', function() {
-                saveLightingSettings();
-            });
+            const saveLightingBtn = document.getElementById('saveLightingBtn');
+            if (saveLightingBtn) {
+                saveLightingBtn.addEventListener('click', function() {
+                    console.log('[DEBUG] Save Lighting button clicked');
+                    saveLightingSettings();
+                });
+                console.log('[DEBUG] Save Lighting button bound');
+            } else {
+                console.error('[ERROR] Save Lighting button not found!');
+            }
             
             // 效果选择器
             document.getElementById('effectSelector').addEventListener('change', function() {
@@ -3521,7 +3566,10 @@
                     document.getElementById(`lighting${tab.charAt(0).toUpperCase() + tab.slice(1)}Tab`).style.display = 'block';
                 });
             });
-            
+        }
+        
+        // 绑定EEPROM查看器按钮事件
+        function bindEepromControls() {
             // EEPROM查看器事件
             document.getElementById('readEepromBtn').addEventListener('click', async function() {
                 await readEEPROM();
@@ -3534,33 +3582,51 @@
         
         // 发送灯光控制命令
         async function sendLightingCommand(command) {
+            console.log(`[DEBUG] sendLightingCommand called with: ${command}`);
+            
             if (!hidDevice) {
                 showStatus('请先连接设备', 3000);
                 return;
             }
             
-            const commandMap = {
-                'LM_ON': 0x7810,
-                'LM_OFF': 0x7811,
-                'LM_TOGG': 0x7812,
-                'LM_NEXT': 0x7813,
-                'LM_PREV': 0x7814,
-                'LM_BRIU': 0x7815,
-                'LM_BRID': 0x7816,
-                'LM_SPDU': 0x7817,
-                'LM_SPDD': 0x7818
-            };
-            
-            const keyCode = commandMap[command];
-            if (!keyCode) {
-                showStatus('无效的灯光命令', 3000);
-                return;
-            }
-            
             try {
-                // 发送灯光控制命令
-                await sendVIAReport(0x04, [CURRENT_LAYER, 0, 0, (keyCode >> 8) & 0xFF, keyCode & 0xFF]);
-                showStatus(`已发送灯光命令: ${command}`, 2000);
+                // 使用 BACKLIGHT_BRIGHTNESS 控制灯光开关
+                // LM_ON = 设置亮度为最大值, LM_OFF = 设置亮度为0
+                if (command === 'LM_ON') {
+                    await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_BRIGHTNESS, 255);
+                    showStatus('已开启灯光', 2000);
+                } else if (command === 'LM_OFF') {
+                    await setVIALightingValue(LIGHTING_VALUE.BACKLIGHT_BRIGHTNESS, 0);
+                    showStatus('已关闭灯光', 2000);
+                } else {
+                    // 其他命令使用原来的方式
+                    const commandMap = {
+                        'LM_TOGG': 0x7812,
+                        'LM_NEXT': 0x7813,
+                        'LM_PREV': 0x7814,
+                        'LM_BRIU': 0x7815,
+                        'LM_BRID': 0x7816,
+                        'LM_SPDU': 0x7817,
+                        'LM_SPDD': 0x7818
+                    };
+                    
+                    const keyCode = commandMap[command];
+                    if (!keyCode) {
+                        showStatus('无效的灯光命令', 3000);
+                        return;
+                    }
+                    
+                    const reportData = new Uint8Array(32);
+                    reportData[0] = 0x04;
+                    reportData[1] = CURRENT_LAYER;
+                    reportData[2] = 0;
+                    reportData[3] = 0;
+                    reportData[4] = (keyCode >> 8) & 0xFF;
+                    reportData[5] = keyCode & 0xFF;
+                    
+                    await hidDevice.sendReport(0, reportData);
+                    showStatus(`已发送灯光命令: ${command}`, 2000);
+                }
             } catch (error) {
                 showStatus(`发送灯光命令失败: ${error.message}`, 3000);
                 console.error('发送灯光命令失败:', error);
@@ -3807,30 +3873,52 @@
                 const layer3Enabled = document.getElementById('layer3Indicator').checked;
                 const layer3Color = document.getElementById('layer3Color').value;
                 
-                // 解析颜色
-                function parseColor(color) {
-                    const r = parseInt(color.slice(1, 3), 16);
-                    const g = parseInt(color.slice(3, 5), 16);
-                    const b = parseInt(color.slice(5, 7), 16);
-                    // 转换为HSL的Hue和Saturation
-                    const max = Math.max(r, g, b);
-                    const min = Math.min(r, g, b);
-                    let h = 0, s = 0;
-                    
-                    if (max !== min) {
-                        const d = max - min;
-                        s = d / max;
-                        switch (max) {
-                            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-                            case g: h = ((b - r) / d + 2) / 6; break;
-                            case b: h = ((r - g) / d + 4) / 6; break;
-                        }
+                // 使用VIA完全相同的RGB转HSV算法
+                function getColorByte(color) {
+                    const cleanedColor = color.replace('#', '');
+                    const r = parseInt(cleanedColor[0], 16) * 16 + parseInt(cleanedColor[1], 16);
+                    const g = parseInt(cleanedColor[2], 16) * 16 + parseInt(cleanedColor[3], 16);
+                    const b = parseInt(cleanedColor[4], 16) * 16 + parseInt(cleanedColor[5], 16);
+                    return [r, g, b];
+                }
+
+                function getHSV(color) {
+                    const [rPrime, gPrime, bPrime] = getColorByte(color).map(c => c / 255);
+                    const [cmax, cmin] = [
+                        Math.max(rPrime, gPrime, bPrime),
+                        Math.min(rPrime, gPrime, bPrime)
+                    ];
+                    const delta = cmax - cmin;
+                    let h = 60;
+                    let s = 0;
+                    let v = cmax;
+                    if (delta === 0) {
+                        h = h * 0;
+                    } else if (cmax === rPrime) {
+                        h = h * (((gPrime - bPrime) / delta) % 6);
+                    } else if (cmax === gPrime) {
+                        h = h * ((bPrime - rPrime) / delta + 2);
+                    } else if (cmax === bPrime) {
+                        h = h * ((rPrime - gPrime) / delta + 4);
                     }
-                    
-                    return {
-                        hue: Math.round(h * 255),
-                        sat: Math.round(s * 255)
-                    };
+                    if (cmax !== 0) {
+                        s = delta / cmax;
+                    }
+                    return [(h + 360) % 360, s, v];
+                }
+
+                function get256HSV(color) {
+                    const [h, s, v] = getHSV(color);
+                    return [
+                        Math.round((255 * h) / 360),
+                        Math.round(255 * s)
+                    ];
+                }
+
+                // 解析颜色 - 使用VIA完全相同的算法
+                function parseColor(color) {
+                    const [hue, sat] = get256HSV(color);
+                    return { hue, sat };
                 }
                 
                 // 设置Caps Lock指示灯
@@ -3856,9 +3944,17 @@
                 // 保存设置到EEPROM
                 await saveVIALighting();
                 
-                showStatus('高级灯光设置已保存', 2000);
+                // 显示成功状态 - 使用更长的显示时间和绿色按钮提示
+                showStatus('✅ 指示灯设置已保存成功！', 4000);
+                const saveBtn = document.getElementById('saveAdvancedBtn');
+                saveBtn.style.background = '#28a745';
+                saveBtn.style.color = 'white';
+                setTimeout(() => {
+                    saveBtn.style.background = '';
+                    saveBtn.style.color = '';
+                }, 2000);
             } catch (error) {
-                showStatus(`保存高级灯光设置失败: ${error.message}`, 3000);
+                showStatus(`❌ 保存失败: ${error.message}`, 3000);
                 console.error('保存高级灯光设置失败:', error);
             }
         }
@@ -3876,6 +3972,12 @@
             
             // 初始化设备选择器
             initDeviceSelector();
+            
+            // 绑定灯光控制
+            bindLightingControls();
+            
+            // 绑定EEPROM控制
+            bindEepromControls();
             
             // 绑定备份按钮
             document.getElementById('backupBtn').addEventListener('click', backupHTML);
