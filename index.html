@@ -2191,12 +2191,31 @@
                 connectBtn.disabled = true;
                 return false;
             }
+            
+            // 检查是否在安全环境下运行（WebHID需要HTTPS或localhost）
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                showStatus('WebHID需要在安全环境下运行（HTTPS或localhost）', 5000);
+                console.warn('[WARN] WebHID requires HTTPS or localhost, current protocol:', window.location.protocol);
+                // 不禁用按钮，让用户可以尝试（某些浏览器可能允许）
+            }
+            
             return true;
         }
 
         // VIA协议命令发送（WebHID格式）
         async function sendVIAReport(commandId, dataArray) {
-            if (!hidDevice) return;
+            // 完整的设备状态检查
+            if (!hidDevice) {
+                showStatus('设备未连接，请先连接设备', 3000);
+                console.error('[ERROR] sendVIAReport: hidDevice is null');
+                return false;
+            }
+            if (!hidDevice.opened) {
+                showStatus('设备已断开，请重新连接', 3000);
+                console.error('[ERROR] sendVIAReport: hidDevice is not opened');
+                return false;
+            }
+            
             // WebHID格式：32字节数据（不含reportId）
             const reportData = new Uint8Array(32);
             reportData[0] = commandId; // 第1字节：命令ID
@@ -2215,15 +2234,38 @@
             try {
                 await hidDevice.sendReport(0, reportData);
                 console.log(`[DEBUG] Sent command ${commandId} (0x${commandId.toString(16)}) with data:`, dataArray || []);
+                return true;
             } catch (e) {
                 showStatus(`发送指令失败: ${e.message}`, 3000);
                 console.error(`[ERROR] Send command ${commandId} error:`, e);
+                
+                // 尝试重新连接
+                if (e.message.includes('write the report')) {
+                    console.warn('[WARN] Report write failed, attempting reconnection...');
+                    setTimeout(() => {
+                        if (hidDevice && !hidDevice.opened) {
+                            showStatus('尝试重新连接设备...', 2000);
+                        }
+                    }, 1000);
+                }
+                return false;
             }
         }
 
         // 发送原始VIA报告（用于宏）- WebHID格式
         async function sendVIAReportRaw(dataArray) {
-            if (!hidDevice) return;
+            // 完整的设备状态检查
+            if (!hidDevice) {
+                showStatus('设备未连接，请先连接设备', 3000);
+                console.error('[ERROR] sendVIAReportRaw: hidDevice is null');
+                return false;
+            }
+            if (!hidDevice.opened) {
+                showStatus('设备已断开，请重新连接', 3000);
+                console.error('[ERROR] sendVIAReportRaw: hidDevice is not opened');
+                return false;
+            }
+            
             // WebHID格式：32字节数据（不含reportId）
             const reportData = new Uint8Array(32);
             
@@ -2241,9 +2283,21 @@
             try {
                 await hidDevice.sendReport(0, reportData);
                 console.log(`[DEBUG] Sent raw report (${reportData.length} bytes):`, Array.from(reportData).slice(0, Math.min(10, reportData.length)).map(b => b.toString(16).padStart(2, '0')).join(' ') + '...');
+                return true;
             } catch (e) {
                 showStatus(`发送指令失败: ${e.message}`, 3000);
                 console.error(`[ERROR] Send raw report error:`, e);
+                
+                // 尝试重新连接
+                if (e.message.includes('write the report')) {
+                    console.warn('[WARN] Report write failed, attempting reconnection...');
+                    setTimeout(() => {
+                        if (hidDevice && !hidDevice.opened) {
+                            showStatus('尝试重新连接设备...', 2000);
+                        }
+                    }, 1000);
+                }
+                return false;
             }
         }
 
