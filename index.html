@@ -2306,21 +2306,15 @@
             if (!checkWebHIDSupport()) return;
 
             try {
-                // 支持所有已配置的设备，同时允许选择其他HID设备
+                // 支持所有已配置的设备
                 const filters = SUPPORTED_DEVICES.map(device => ({
                     vendorId: device.vid,
                     productId: device.pid
                 }));
 
-                // 添加通用HID设备支持（允许选择任何HID设备）
-                filters.push({
-                    usagePage: 0xFF60, // VIA raw_hid usage page
-                    usage: 0x61
-                });
-
+                // 直接请求设备，让用户从选择器中选择
                 const devices = await navigator.hid.requestDevice({
-                    filters: filters,
-                    optionalServices: ['device_information']
+                    filters: filters
                 });
 
                 console.log('[DEBUG] Found devices:', devices);
