@@ -3818,8 +3818,12 @@
         
         // 发送VIA协议命令（用于灯光设置等）
         async function sendVIACommand(commandId, data) {
+            // 完整的设备状态检查
             if (!hidDevice) {
                 throw new Error('设备未连接');
+            }
+            if (!hidDevice.opened) {
+                throw new Error('设备已断开');
             }
             
             const reportData = new Uint8Array(32); // WebHID使用32字节
@@ -3834,8 +3838,13 @@
                 });
             }
             
-            await hidDevice.sendReport(0, reportData);
-            console.log(`[DEBUG] Sent VIA command ${commandId} (0x${commandId.toString(16)}) with data:`, data || []);
+            try {
+                await hidDevice.sendReport(0, reportData);
+                console.log(`[DEBUG] Sent VIA command ${commandId} (0x${commandId.toString(16)}) with data:`, data || []);
+            } catch (e) {
+                console.error(`[ERROR] Send VIA command ${commandId} error:`, e);
+                throw new Error(`发送指令失败: ${e.message}`);
+            }
         }
         
         // 读取VIA协议命令
